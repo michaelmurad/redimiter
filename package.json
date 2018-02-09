@@ -1,0 +1,31 @@
+{
+  "name": "redimiter",
+  "version": "0.1.0",
+  "description": "A redis middleware rate limiter",
+  "main": "dist/index.js",
+  "scripts": {
+    "compile": "tsc",
+    "test": "npm run compile && npm run testOnly",
+    "testOnly": "mocha ./dist/test/*.js"
+  },
+  "keywords": ["redis", "graphql", "rate", "limiter", "rate-limiter"],
+  "author": "Michael Murad",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/chai": "^4.1.2",
+    "@types/node": "^9.4.2",
+    "@types/sinon": "^4.1.3",
+    "body-parser": "^1.18.2",
+    "chai": "^4.1.2",
+    "chai-as-promised": "^7.1.1",
+    "express": "^4.16.2",
+    "ioredis": "^3.2.2",
+    "mocha": "^5.0.0",
+    "prettier": "^1.10.2",
+    "querystring": "^0.2.0",
+    "restify": "^6.3.4",
+    "sinon": "^4.2.2",
+    "supertest": "^3.0.0",
+    "typescript": "^2.7.1"
+  }
+}
