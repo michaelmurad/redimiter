@@ -130,17 +130,17 @@ export default class Redimiter {
       }
       redis
         .get(rateId)
-        .then(rateScore => {
-          const parseRateScore = parseInt(rateScore, 10) || 0;
+        .then(score => {
+          const rateScore = parseInt(score, 10) || 1;
           if (rateScore > rateLimit * 10) {
             redis
-              .psetex(rateId, expireMilisecs * 1000, parseRateScore)
+              .psetex(rateId, expireMilisecs * 1000, rateScore)
               .then(() => reject("You are doing this way tooo much"))
               .catch(err => reject(err));
           }
           if (rateScore > rateLimit) {
             redis
-              .psetex(rateId, expireMilisecs, increaseByInc + parseRateScore)
+              .psetex(rateId, expireMilisecs, increaseByInc + rateScore)
               .then(() =>
                 reject(
                   "You are doing this way too much, please wait a few minutes."
@@ -150,7 +150,7 @@ export default class Redimiter {
           }
 
           redis
-            .psetex(rateId, expireMilisecs, increaseByInc + parseRateScore)
+            .psetex(rateId, expireMilisecs, increaseByInc + rateScore)
             .then(() => resolve())
             .catch(err => reject(err));
         })
