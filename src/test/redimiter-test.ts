@@ -3,6 +3,7 @@ import * as chaiAsPromised from "chai-as-promised";
 import * as Redis from "ioredis";
 import * as mocha from "mocha";
 import { spy } from "sinon";
+import { promisify } from "util";
 import redis = require("redis");
 import { stringify } from "querystring";
 import bodyParser from "body-parser";
@@ -13,46 +14,27 @@ import express3 = require("express3"); // old but commonly still used
 import Redimiter from "../";
 import { setTimeout } from "timers";
 
-interface Console {
-  error: {
-    restore: Function;
-  };
-}
+// interface Console {
+//   error: {
+//     restore: Function;
+//   };
+// }
 
 const { expect } = chai;
 const { describe, it, beforeEach, afterEach } = mocha;
 
-chai.use(chaiAsPromised);
+// chai.use(chaiAsPromised);
 
-describe("Version of Redis Client", () => {
-  it("should be able to determine each version", () => {
-    const re = redis.createClient();
+describe("Versions of Redis Client", () => {
+  it("should return the same info", async () => {
     const io = new Redis();
-    expect(re.options["socket_nodelay"]).to.not.be.equal(
-      io.options["socket_nodelay"]
-    );
-    expect(re.options["socket_nodelay"]).to.be.a("boolean");
-    expect(io.options["socket_nodelay"]).to.be.a("undefined");
-  });
-  it("should return the same below", done => {
-    const io = new Redis();
-    const re = redis.createClient();
-    function cb(err, res) {
-      expect(err).be.equal(null);
-      expect(res).to.be.equal("388");
-      done();
-    }
+    const nR = redis.createClient();
+    const nRe = promisify(nR.get).bind(nR);
 
-    io.get("currentSubId", cb);
-  });
-  it("should return the same info above", done => {
-    const re = redis.createClient();
-    function cb(err, res) {
-      expect(err).be.equal(null);
-      expect(res).to.be.equal("388");
-      done();
-    }
-    re.get("currentSubId", cb);
+    const nRed = await nRe("currentSubId");
+    const ioRed = await io.get("currentSubId");
+    expect(nRed).to.be.equal("388");
+    expect(ioRed).to.be.equal("388");
   });
 });
 
@@ -115,10 +97,10 @@ describe("redisRateLimiter constructer", () => {
   });
 });
 
-[[express, "express-modern"], [express3, "express-old"]].forEach(
-  ([serverImpl, name]) => {
+[[express, "express4"], [express3, "express3"]].forEach(
+  ([expressVersion, name]) => {
     function server() {
-      const app = serverImpl();
+      const app = expressVersion();
       if (app.set) {
         // This ensures consistent tests, as express defaults json spacing to
         // 0 only in "production" mode.
@@ -183,17 +165,49 @@ describe("redisRateLimiter constructer", () => {
             expect(response.status).to.equal(200);
             expect(response.text).to.equal("sun");
           });
-          it("should fire call with 0 args but throw error", async () => {
+          it("should fire call with 0 args", done => {
+            // have to wait a second to let second pass from previous tests
+            setTimeout(async () => {
+              const spyConsole = spy(console, "error");
+              const app = server();
+              app.get("/uh", redimiter.rateLimiter(), (req, res) =>
+                res.status(200).send("uh")
+              );
+              const response = await request(app).get("/uh");
+              expect(response.status).to.equal(200);
+              expect(response.text).to.equal("uh");
+              expect(spyConsole.callCount).to.equal(0);
+              spyConsole.restore();
+              done();
+            }, 1001);
+          });
+          it("should fire call with non string but throw error", async () => {
             const spyConsole = spy(console, "error");
             const app = server();
-            app.get("/uh", redimiter.rateLimiter(null), (req, res) =>
+            app.get("/uh", redimiter.rateLimiter(90), (req, res) =>
               res.status(200).send("uh")
             );
             const response = await request(app).get("/uh");
             expect(response.status).to.equal(200);
             expect(response.text).to.equal("uh");
             expect(spyConsole.args[0][0]).to.equal(
-              "you need to add a string parameter to your rateLimiter('url') arg. It will be 'url' until then"
+              "you need to add a string parameter to your rateLimiter('url') arg."
+            );
+            spyConsole.restore();
+          });
+          it("should throw error if strings instead of numbers", async () => {
+            const spyConsole = spy(console, "error");
+            const app = server();
+            app.get(
+              "/uh",
+              redimiter.rateLimiter(90, "ha", "ararar", false),
+              (req, res) => res.status(200).send("uh")
+            );
+            const response = await request(app).get("/uh");
+            expect(response.status).to.equal(500);
+            expect(response.text).to.not.equal("uh");
+            expect(spyConsole.args[0][0]).to.equal(
+              "you need to add a string parameter to your rateLimiter('url') arg."
             );
             spyConsole.restore();
           });
@@ -252,7 +266,7 @@ describe("redisRateLimiter constructer", () => {
             expect(response3.status).to.equal(403);
             expect(response3.text).to.not.equal("howdy");
           });
-          it("should rate limit then after allotted time allow req again", async () => {
+          it("should rate limit then after allotted time allow req again", done => {
             const app = server();
 
             app.get(
@@ -260,32 +274,82 @@ describe("redisRateLimiter constructer", () => {
               redimiter.rateLimiter(`moo${name}${cliName}`, 50, 2, 1),
               (req, res) => res.status(200).send("moo")
             );
-            const n = 2500000;
-            const manyComments = num =>
-              Array.from({ length: num }, (v, k) => {
-                return {
-                  body: "oh man",
-                  id: k,
-                  timeStamp: k,
-                  createdBy: "mike"
-                };
-              });
+            (async function firstTests() {
+              const response = await request(app).get("/moo");
+              const response2 = await request(app).get("/moo");
+              const response3 = await request(app).get("/moo");
 
-            const response = await request(app).get("/moo");
-            const response2 = await request(app).get("/moo");
-            const response3 = await request(app).get("/moo");
-            // creating a big array to stall for over 50ms
-            const bigArray = manyComments(n);
-            const response4 = await request(app).get("/moo");
+              expect(response.status).to.equal(200);
+              expect(response.text).to.equal("moo");
+              expect(response2.status).to.equal(200);
+              expect(response2.text).to.equal("moo");
+              expect(response3.status).to.equal(403);
+              expect(response3.text).to.not.equal("moo");
+            })();
 
-            expect(response.status).to.equal(200);
-            expect(response.text).to.equal("moo");
-            expect(response2.status).to.equal(200);
-            expect(response2.text).to.equal("moo");
-            expect(response3.status).to.equal(403);
-            expect(response3.text).to.not.equal("moo");
-            expect(response4.status).to.equal(200);
-            expect(response4.text).to.equal("moo");
+            setTimeout(async () => {
+              const response4 = await request(app).get("/moo");
+              expect(response4.status).to.equal(200);
+              expect(response4.text).to.equal("moo");
+              done();
+            }, 500);
+          });
+          it("should rate limit 10 under one second with no args", done => {
+            setTimeout(async () => {
+              const app = server();
+              // this simulates no args
+              app.get(`/oo`, redimiter.rateLimiter(), (req, res) =>
+                res.status(200).send("oo")
+              );
+
+              const response = await request(app).get("/oo");
+              const response2 = await request(app).get("/oo");
+              const response3 = await request(app).get("/oo");
+              const response4 = await request(app).get("/oo");
+              const response5 = await request(app).get("/oo");
+              const response6 = await request(app).get("/oo");
+              const response7 = await request(app).get("/oo");
+              const response8 = await request(app).get("/oo");
+              const response9 = await request(app).get("/oo");
+              const response10 = await request(app).get("/oo");
+              const response11 = await request(app).get("/oo");
+              const response12 = await request(app).get("/oo");
+              const response13 = await request(app).get("/oo");
+              const response14 = await request(app).get("/oo");
+              const response15 = await request(app).get("/oo");
+
+              expect(response.status).to.equal(200);
+              expect(response.text).to.equal("oo");
+              expect(response2.status).to.equal(200);
+              expect(response2.text).to.equal("oo");
+              expect(response3.status).to.equal(200);
+              expect(response3.text).to.equal("oo");
+              expect(response4.status).to.equal(200);
+              expect(response4.text).to.equal("oo");
+              expect(response5.status).to.equal(200);
+              expect(response5.text).to.equal("oo");
+              expect(response6.status).to.equal(200);
+              expect(response6.text).to.equal("oo");
+              expect(response7.status).to.equal(200);
+              expect(response7.text).to.equal("oo");
+              expect(response8.status).to.equal(200);
+              expect(response8.text).to.equal("oo");
+              expect(response9.status).to.equal(200);
+              expect(response9.text).to.equal("oo");
+              expect(response10.status).to.equal(200);
+              expect(response10.text).to.equal("oo");
+              expect(response11.status).to.equal(403);
+              expect(response11.text).to.not.equal("oo");
+              expect(response12.status).to.equal(403);
+              expect(response12.text).to.not.equal("oo");
+              expect(response13.status).to.equal(403);
+              expect(response13.text).to.not.equal("oo");
+              expect(response14.status).to.equal(403);
+              expect(response14.text).to.not.not.equal("oo");
+              expect(response15.status).to.equal(403);
+              expect(response15.text).to.not.equal("oo");
+              done();
+            }, 1201);
           });
         });
       });
