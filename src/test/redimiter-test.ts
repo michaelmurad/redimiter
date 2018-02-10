@@ -309,9 +309,9 @@ describe("redisRateLimiter constructer", () => {
                 index += 1;
               }
 
-              const response10 = await request(app).get("/oo");
-              expect(response10.status).to.equal(403);
-              expect(response10.text).to.not.equal("oo");
+              const response11 = await request(app).get("/oo");
+              expect(response11.status).to.equal(403);
+              expect(response11.text).to.not.equal("oo");
 
               done();
             }, 1001);
