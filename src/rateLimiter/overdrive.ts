@@ -1,5 +1,6 @@
 import { RedisOptions, Redis as RedisClient } from "ioredis";
 import { NextFunction, Response } from "express";
+import { promisify } from "util";
 
 const overdrive = (
   rateId: string,
@@ -9,9 +10,11 @@ const overdrive = (
   increaseByInc: number,
   res: Response,
   next: Function
-) =>
-  redis
-    .get(rateId)
+) => {
+  const getAsync = promisify(redis.get).bind(redis);
+  // return redis.options["socket_nodelay"] === undefined ? redis.get(rateId) : getAsync(rateId)
+  return redis
+    .getAsync(rateId)
     .then((score: string) => {
       const rateScore: number = parseInt(score, 10) || 1;
       console.log("get result: ", rateScore);
@@ -50,5 +53,6 @@ const overdrive = (
       res.status(500).send(err);
       return res.end();
     });
+};
 
 export default overdrive;

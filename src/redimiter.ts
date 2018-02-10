@@ -56,10 +56,7 @@ export default class Redimiter {
       res.status(500).send("No ip address");
       return res.end(null);
     }
-    const rateId: string = ip + key;
-    console.log(rateId);
-    console.log("ip: ", ip);
-
+    const rateId: string = `${ip}:${key}`;
     // rateId will be the key and its value will be the score we use to compare rateLimit
     // first check to see if value is already out of limit
     if (!overDr) {
@@ -83,7 +80,7 @@ export default class Redimiter {
       next
     );
   };
-  public resolverRateLimiter: Function = (
+  public rateLimiterPromise: Function = (
     expireMilisecs: number,
     increaseByInc: number,
     rateLimit: number,
@@ -92,7 +89,7 @@ export default class Redimiter {
   ): Promise<null> =>
     new Promise((resolve, reject) => {
       const redis: RedisClient = this.redisClient;
-      const rateId: string = username + query;
+      const rateId: string = `${username}:${query}`;
       console.log(rateId);
       if (!username) {
         reject("there is no user");

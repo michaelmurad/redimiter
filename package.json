@@ -6,10 +6,9 @@
   "scripts": {
     "compile": "tsc",
     "pretest": "npm run compile",
-    "test": "npm run testOnly",
-    "testOnly": "mocha ./dist/test/*.js"
+    "test": "mocha ./dist/test/*.js"
   },
-  "keywords": ["redis", "graphql", "rate", "limiter", "rate-limiter"],
+  "keywords": ["redis", "express", "rate", "limiter", "rate-limiter"],
   "author": "Michael Murad",
   "license": "MIT",
   "devDependencies": {
@@ -21,11 +20,12 @@
     "chai": "^4.1.2",
     "chai-as-promised": "^7.1.1",
     "express": "^4.16.2",
+    "express3": "0.0.0",
     "ioredis": "^3.2.2",
     "mocha": "^5.0.0",
     "prettier": "^1.10.2",
     "querystring": "^0.2.0",
-    "restify": "^6.3.4",
+    "redis": "^2.8.0",
     "sinon": "^4.2.2",
     "supertest": "^3.0.0",
     "typescript": "^2.7.1"
