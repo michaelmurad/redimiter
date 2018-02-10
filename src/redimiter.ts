@@ -1,12 +1,11 @@
 import { RedisOptions, Redis as RedisClient } from "ioredis";
 import { NextFunction, Request, Response } from "express";
-
 import { nonOverdrive, overdrive } from "./rateLimiter";
 
 /**
  * @typedef {object} RateClass A class that has a constructor that takes a redis client and then has several rate limiting methods
  * @property {function} constructor Creates a new instance of RedisRateLimiter
- * @property {function} rateLimiter An express middleware limiter that uses a client's ip address
+ * @property {function} rateLimiter An express middleware rate limiter that uses a client's ip address
  */
 export default class Redimiter {
   public redisClient: RedisClient;
@@ -33,8 +32,8 @@ export default class Redimiter {
    * @return {function}
    */
   public rateLimiter = (
-    /** Redis key that will be appended to the ip that will store client request rate. REQUIRED */
-    url: string,
+    /** Redis key that will be appended to the ip that will store client request rate.*/
+    url: string = Math.round(new Date().getTime() / 1000).toString(),
     /** Miliseconds in which the rate limiter will expire after last client request: DEFAULT 10000 */
     expireMilisecs = 10000,
     /** the limit of requests allowed within the expireMilisecs timeframe. DEFAULT 10 */
@@ -44,12 +43,13 @@ export default class Redimiter {
     /** Allows further rate limiting if client keeps sending requests. DEFAULT false */
     overDr = false
   ) => (req: Request, res, next: NextFunction): Function => {
-    if (!url) {
+    let key: string = url;
+    if (typeof url !== "string") {
       console.error(
-        "you need to add a string parameter to your rateLimiter('url') arg. It will be 'url' until then"
+        "you need to add a string parameter to your rateLimiter('url') arg."
       );
+      key = key.toString();
     }
-    const key = url || "url";
     const redis: RedisClient = this.redisClient;
     const ip = req.ip;
     if (!ip) {

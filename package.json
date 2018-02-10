@@ -8,7 +8,13 @@
     "pretest": "npm run compile",
     "test": "mocha ./dist/test/*.js"
   },
-  "keywords": ["redis", "express", "rate", "limiter", "rate-limiter"],
+  "keywords": [
+    "redis",
+    "express",
+    "rate",
+    "limiter",
+    "rate-limiter"
+  ],
   "author": "Michael Murad",
   "license": "MIT",
   "devDependencies": {
