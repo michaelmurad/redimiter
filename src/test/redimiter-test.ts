@@ -297,7 +297,6 @@ describe("redisRateLimiter constructer", () => {
           it("should rate limit 10 under one second with no args", done => {
             setTimeout(async () => {
               const app = server();
-              // this simulates no args
               app.get(`/oo`, redimiter.rateLimiter(), (req, res) =>
                 res.status(200).send("oo")
               );
