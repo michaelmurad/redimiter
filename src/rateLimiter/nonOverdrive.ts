@@ -1,5 +1,6 @@
 import { NextFunction, Response } from "express";
 import { RedisOptions, Redis as RedisClient } from "ioredis";
+import { promisify } from "util";
 
 const nonOverdrive = (
   rateId: string,
@@ -9,12 +10,12 @@ const nonOverdrive = (
   increaseByInc: number,
   res: Response,
   next: NextFunction
-) =>
-  redis
-    .get(rateId)
+) => {
+  const getAsync = promisify(redis.get).bind(redis);
+  const psetexAsync = promisify(redis.psetex).bind(redis);
+  return getAsync(rateId)
     .then(score => {
       const rateScore: number = parseInt(score, 10) || 1;
-      console.log("get result: ", rateScore);
       // otherwise this will block the action for a short time and still increment the value
       // and reset the expire time
       if (rateScore > rateLimit) {
@@ -25,13 +26,16 @@ const nonOverdrive = (
       }
       // if the value isn't out of limit then allow action,
       // increment value, and reset expiration time
-      return redis
-        .psetex(rateId, expireMilisecs, increaseByInc + rateScore)
-        .then(() => next());
+      return psetexAsync(
+        rateId,
+        expireMilisecs,
+        increaseByInc + rateScore
+      ).then(() => next());
     })
     .catch(err => {
       res.status(500).send(err);
       return res.end();
     });
+};
 
 export default nonOverdrive;
