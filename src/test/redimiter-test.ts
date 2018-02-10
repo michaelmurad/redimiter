@@ -300,55 +300,21 @@ describe("redisRateLimiter constructer", () => {
               app.get(`/oo`, redimiter.rateLimiter(), (req, res) =>
                 res.status(200).send("oo")
               );
+              let index = 0;
 
-              const response = await request(app).get("/oo");
-              const response2 = await request(app).get("/oo");
-              const response3 = await request(app).get("/oo");
-              const response4 = await request(app).get("/oo");
-              const response5 = await request(app).get("/oo");
-              const response6 = await request(app).get("/oo");
-              const response7 = await request(app).get("/oo");
-              const response8 = await request(app).get("/oo");
-              const response9 = await request(app).get("/oo");
+              while (index < 10) {
+                const response = await request(app).get("/oo");
+                expect(response.status).to.equal(200);
+                expect(response.text).to.equal("oo");
+                index += 1;
+              }
+
               const response10 = await request(app).get("/oo");
-              const response11 = await request(app).get("/oo");
-              const response12 = await request(app).get("/oo");
-              const response13 = await request(app).get("/oo");
-              const response14 = await request(app).get("/oo");
-              const response15 = await request(app).get("/oo");
+              expect(response10.status).to.equal(403);
+              expect(response10.text).to.not.equal("oo");
 
-              expect(response.status).to.equal(200);
-              expect(response.text).to.equal("oo");
-              expect(response2.status).to.equal(200);
-              expect(response2.text).to.equal("oo");
-              expect(response3.status).to.equal(200);
-              expect(response3.text).to.equal("oo");
-              expect(response4.status).to.equal(200);
-              expect(response4.text).to.equal("oo");
-              expect(response5.status).to.equal(200);
-              expect(response5.text).to.equal("oo");
-              expect(response6.status).to.equal(200);
-              expect(response6.text).to.equal("oo");
-              expect(response7.status).to.equal(200);
-              expect(response7.text).to.equal("oo");
-              expect(response8.status).to.equal(200);
-              expect(response8.text).to.equal("oo");
-              expect(response9.status).to.equal(200);
-              expect(response9.text).to.equal("oo");
-              expect(response10.status).to.equal(200);
-              expect(response10.text).to.equal("oo");
-              expect(response11.status).to.equal(403);
-              expect(response11.text).to.not.equal("oo");
-              expect(response12.status).to.equal(403);
-              expect(response12.text).to.not.equal("oo");
-              expect(response13.status).to.equal(403);
-              expect(response13.text).to.not.equal("oo");
-              expect(response14.status).to.equal(403);
-              expect(response14.text).to.not.not.equal("oo");
-              expect(response15.status).to.equal(403);
-              expect(response15.text).to.not.equal("oo");
               done();
-            }, 1201);
+            }, 1001);
           });
         });
       });
