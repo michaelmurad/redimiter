@@ -2,7 +2,7 @@ import { NextFunction, Response } from "express";
 import { RedisOptions, Redis as RedisClient } from "ioredis";
 import { promisify } from "util";
 
-const nonOverdrive = (
+export default (
   rateId: string,
   redis: RedisClient,
   rateLimit: number,
@@ -34,5 +34,3 @@ const nonOverdrive = (
       return res.end();
     });
 };
-
-export default nonOverdrive;
