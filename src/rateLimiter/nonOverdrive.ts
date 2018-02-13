@@ -48,33 +48,4 @@ export default (
       return next();
     });
   });
-  // .then(score => {
-  //   // if there is no value then incr it and set expire
-  //   if (score === null) {
-  //     return redis
-  //       .multi()
-  //       .incr(rateId)
-  //       .pexpire(rateId, expireMilisecs)
-  //       .exec((err, _) => {
-  //         if (err) {
-  //           res.status(500).send(err);
-  //           return res.end();
-  //         }
-  //         return next();
-  //       });
-  //   }
-  //   // this will block the action
-  //   if (parseInt(score, 10) >= rateLimit) {
-  //     res.status(403).send({
-  //       error: "You are doing this too much, try again in a few minutes"
-  //     });
-  //     return res.end();
-  //   }
-  //   // if the value isn't out of limit then allow action & increment value
-  //   return incrAsync(rateId).then(() => next());
-  // })
-  // .catch(err => {
-  //   res.status(500).send(err);
-  //   return res.end();
-  // });
 };
