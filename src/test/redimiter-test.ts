@@ -14,12 +14,6 @@ import express3 = require("express3"); // old but commonly still used
 import Redimiter from "../";
 import { setTimeout } from "timers";
 
-// interface Console {
-//   error: {
-//     restore: Function;
-//   };
-// }
-
 const { expect } = chai;
 const { describe, it, beforeEach, afterEach } = mocha;
 
@@ -28,13 +22,22 @@ const { describe, it, beforeEach, afterEach } = mocha;
 describe("Versions of Redis Client", () => {
   it("should return the same info", async () => {
     const io = new Redis();
+    const testString = "testString123";
+    const testString2 = "afdasd";
+    const testStringValue = 388;
     const nR = redis.createClient();
+    io.set(testString, testStringValue);
+    nR.set(testString2, testStringValue + 1);
     const nRe = promisify(nR.get).bind(nR);
 
-    const nRed = await nRe("currentSubId");
-    const ioRed = await io.get("currentSubId");
+    const nRed = await nRe(testString);
+    const ioRed = await io.get(testString);
+    const nRed2 = await nRe(testString2);
+    const ioRed2 = await io.get(testString2);
     expect(nRed).to.be.equal("388");
     expect(ioRed).to.be.equal("388");
+    expect(nRed2).to.be.equal("389");
+    expect(ioRed2).to.be.equal("389");
   });
 });
 
@@ -76,7 +79,7 @@ describe("test harness", () => {
 });
 
 describe("redisRateLimiter constructer", () => {
-  it("should throw an error if no redis client", () => {
+  it("should console.error an error if no redis client", () => {
     const spyConsole = spy(console, "error");
     const r = new Redimiter(null);
     expect(spyConsole.callCount).to.equal(1);
@@ -129,7 +132,12 @@ describe("redisRateLimiter constructer", () => {
             const app = server();
             app.get(
               "/home",
-              redimiter.rateLimiter("/home", 3000, 2000, 1),
+              redimiter.rateLimiter({
+                path: "/home",
+                expireMilisecs: 3000,
+                rateLimit: 2000,
+                increaseByInc: 1
+              }),
               (req, res) => res.status(200).send("happy")
             );
             const response = await request(app).get("/home");
@@ -138,8 +146,10 @@ describe("redisRateLimiter constructer", () => {
           });
           it("should fire call with 1 arg", async () => {
             const app = server();
-            app.get("/home", redimiter.rateLimiter("/home"), (req, res) =>
-              res.status(200).send("happy")
+            app.get(
+              "/home",
+              redimiter.rateLimiter({ path: "/home" }),
+              (req, res) => res.status(200).send("happy")
             );
             const response = await request(app).get("/home");
             expect(response.status).to.equal(200);
@@ -147,8 +157,10 @@ describe("redisRateLimiter constructer", () => {
           });
           it("should fire call with 2 args", async () => {
             const app = server();
-            app.get("/moon", redimiter.rateLimiter("moon", 3000), (req, res) =>
-              res.status(200).send("moon")
+            app.get(
+              "/moon",
+              redimiter.rateLimiter({ path: "moon", expireMilisecs: 3000 }),
+              (req, res) => res.status(200).send("moon")
             );
             const response = await request(app).get("/moon");
             expect(response.status).to.equal(200);
@@ -158,7 +170,11 @@ describe("redisRateLimiter constructer", () => {
             const app = server();
             app.get(
               "/sun",
-              redimiter.rateLimiter("sun", 3000, 10),
+              redimiter.rateLimiter({
+                path: "sun",
+                expireMilisecs: 3000,
+                rateLimit: 10
+              }),
               (req, res) => res.status(200).send("sun")
             );
             const response = await request(app).get("/sun");
@@ -166,11 +182,12 @@ describe("redisRateLimiter constructer", () => {
             expect(response.text).to.equal("sun");
           });
           it("should fire call with 0 args", done => {
-            // have to wait a second to let second pass from previous tests
+            // have to wait a second to let second pass to avoid pollution from previous tests
             setTimeout(async () => {
               const spyConsole = spy(console, "error");
               const app = server();
-              app.get("/uh", redimiter.rateLimiter(), (req, res) =>
+              const { rateLimiter } = redimiter;
+              app.get("/uh", rateLimiter(), (req, res) =>
                 res.status(200).send("uh")
               );
               const response = await request(app).get("/uh");
@@ -184,7 +201,7 @@ describe("redisRateLimiter constructer", () => {
           it("should fire call with non string but throw error", async () => {
             const spyConsole = spy(console, "error");
             const app = server();
-            app.get("/uh", redimiter.rateLimiter(90), (req, res) =>
+            app.get("/uh", redimiter.rateLimiter({ path: 90 }), (req, res) =>
               res.status(200).send("uh")
             );
             const response = await request(app).get("/uh");
@@ -200,12 +217,17 @@ describe("redisRateLimiter constructer", () => {
             const app = server();
             app.get(
               "/uh",
-              redimiter.rateLimiter(90, "ha", "ararar", false),
+              redimiter.rateLimiter({ path: 90, expireMilisecs: "ha" }),
               (req, res) => res.status(200).send("uh")
             );
+
             const response = await request(app).get("/uh");
+
             expect(response.status).to.equal(500);
             expect(response.text).to.not.equal("uh");
+            expect(
+              redimiter.rateLimiter({ path: 90, expireMilisecs: "ha" })
+            ).to.throw("arg must be a number");
             expect(spyConsole.args[0][0]).to.equal(
               "you need to add a string parameter to your rateLimiter('url') arg."
             );
@@ -215,11 +237,13 @@ describe("redisRateLimiter constructer", () => {
         describe("redisRateLimiter.rateLimiter() ratelimiting", () => {
           it("should allow req if under rate limit", async () => {
             const app = server();
-            app.get(
-              "/home",
-              redimiter.rateLimiter("hello", 3000, 2000, 1),
-              (req, res) => res.status(200).send("hello")
-            );
+            const home = redimiter.rateLimiter({
+              path: "hello",
+              expireMilisecs: 3000,
+              rateLimit: 2000,
+              increaseByInc: 1
+            });
+            app.get("/home", home, (req, res) => res.status(200).send("hello"));
 
             const response = await request(app).get("/home");
 
@@ -249,15 +273,19 @@ describe("redisRateLimiter constructer", () => {
           it("should rate limit when over limit", async () => {
             const app = server();
 
-            app.get(
+            app.post(
               "/howdy",
-              redimiter.rateLimiter(`howdy${name}${cliName}`, 3000, 2, 1),
+              redimiter.rateLimiter({
+                path: `howdy${name}${cliName}`,
+                expireMilisecs: 3000,
+                rateLimit: 2
+              }),
               (req, res) => res.status(200).send("howdy")
             );
 
-            const response = await request(app).get("/howdy");
-            const response2 = await request(app).get("/howdy");
-            const response3 = await request(app).get("/howdy");
+            const response = await request(app).post("/howdy");
+            const response2 = await request(app).post("/howdy");
+            const response3 = await request(app).post("/howdy");
 
             expect(response.status).to.equal(200);
             expect(response.text).to.equal("howdy");
@@ -271,7 +299,11 @@ describe("redisRateLimiter constructer", () => {
 
             app.get(
               "/moo",
-              redimiter.rateLimiter(`moo${name}${cliName}`, 50, 2, 1),
+              redimiter.rateLimiter({
+                path: `moo${name}${cliName}`,
+                expireMilisecs: 50,
+                rateLimit: 2
+              }),
               (req, res) => res.status(200).send("moo")
             );
             (async function firstTests() {
@@ -297,12 +329,38 @@ describe("redisRateLimiter constructer", () => {
           it("should rate limit 10 under one second with no args", done => {
             setTimeout(async () => {
               const app = server();
-              app.get(`/oo`, redimiter.rateLimiter(), (req, res) =>
+              const { rateLimiter } = redimiter;
+              const getLimiter = rateLimiter();
+              app.get(`/oo`, getLimiter, (req, res) =>
                 res.status(200).send("oo")
               );
               let index = 0;
 
               while (index < 10) {
+                const response = await request(app).get("/oo");
+                expect(response.status).to.equal(200);
+                expect(response.text).to.equal("oo");
+                index += 1;
+              }
+
+              const response11 = await request(app).get("/oo");
+              expect(response11.status).to.equal(403);
+              expect(response11.text).to.not.equal("oo");
+
+              done();
+            }, 1001);
+          });
+          it("should rate limit 5 under one second with rateLimit: 5 args", done => {
+            setTimeout(async () => {
+              const app = server();
+              const { rateLimiter } = redimiter;
+              // const getLimiter = rateLimiter();
+              app.get(`/oo`, rateLimiter({ rateLimit: 5 }), (req, res) =>
+                res.status(200).send("oo")
+              );
+              let index = 0;
+
+              while (index < 5) {
                 const response = await request(app).get("/oo");
                 expect(response.status).to.equal(200);
                 expect(response.text).to.equal("oo");
