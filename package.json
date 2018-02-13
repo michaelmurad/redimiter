@@ -8,13 +8,7 @@
     "pretest": "npm run compile",
     "test": "mocha --check-leaks ./dist/test/*.js --exit"
   },
-  "keywords": [
-    "redis",
-    "express",
-    "rate",
-    "limiter",
-    "rate-limiter"
-  ],
+  "keywords": ["redis", "express", "rate", "limiter", "rate-limiter"],
   "author": "Michael Murad",
   "license": "MIT",
   "devDependencies": {
