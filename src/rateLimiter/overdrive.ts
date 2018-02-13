@@ -10,49 +10,78 @@ export default (
   res: Response,
   next: NextFunction
 ) => {
-  const getAsync = promisify(redis.get).bind(redis);
-  const psetexAsync = promisify(redis.psetex).bind(redis);
-
-  return getAsync(rateId)
-    .then((score: string) => {
-      const rateScore: number = parseInt(score, 10) || 1;
-      console.log("get result: ", rateScore);
-      // if the calue is over 10x the value it will simply block it
-      if (rateScore > rateLimit * 10) {
-        return res.status(403).send({
-          error: "You are doing this WAY too much, try again much later"
-        });
-      }
-      // if the value is 10x the limit
-      // this will block the action for 1000x the expire time
-      if (rateScore === rateLimit * 10) {
-        return psetexAsync(rateId, expireMilisecs * 1000, rateScore + 1).then(
-          () => {
-            res.status(403).send({
-              error: "You are doing this WAY too much, try again much later"
-            });
-            return res.end();
+  function errorFunc(err) {
+    res.status(500).send(err);
+    return res.end();
+  }
+  const request = "r";
+  // this will get the score (number of requests by rateId)
+  return redis.llen(rateId, (err, score) => {
+    if (err) {
+      return errorFunc(err);
+    }
+    console.log("get result: ", score);
+    // if the score is over 10x the rateLimit it will simply block it
+    if (score > rateLimit * 10) {
+      console.log("blocked");
+      res.status(403).send({
+        error: "You are doing this WAY too much, try again much later"
+      });
+      return res.end();
+    }
+    // if the value is 10x the limit
+    // this will block the action for 1000x the expire time
+    if (score === rateLimit * 10) {
+      console.log("ratelimit * 10");
+      return redis
+        .multi()
+        .rpushx(rateId, request)
+        .pexpire(rateId, expireMilisecs * 1000)
+        .exec((execErr, _) => {
+          if (execErr) {
+            console.log("execErr");
+            return errorFunc(execErr);
           }
-        );
-      }
-      // otherwise this will block the action for a short time and still increment the value
-      // and reset the expire time
-      if (rateScore > rateLimit) {
-        return psetexAsync(rateId, expireMilisecs, 1 + rateScore).then(() => {
           res.status(403).send({
-            error: "You are doing this too much, try again in a little bit"
+            error: "You are doing this WAY too much, try again much later"
           });
           return res.end();
         });
+    }
+    // otherwise this will block the action and still incr score
+    if (score >= rateLimit) {
+      console.log("regular block");
+      return redis.rpushx(rateId, request, (rpushErr, _) => {
+        if (rpushErr) {
+          console.log("rpushErr");
+          return errorFunc(rpushErr);
+        }
+        res.status(403).send({
+          error: "You are doing this too much, try again in a little bit"
+        });
+        return res.end();
+      });
+    }
+    // allow action and incr score
+    if (!score) {
+      return redis
+        .multi()
+        .rpush(rateId, request)
+        .pexpire(rateId, expireMilisecs)
+        .exec((execErr, _) => {
+          if (execErr) {
+            console.log("execErr");
+            return errorFunc(execErr);
+          }
+          return next();
+        });
+    }
+    return redis.rpushx(rateId, request, (rpushErr, _) => {
+      if (rpushErr) {
+        console.log("rpushErr");
+        return errorFunc(rpushErr);
       }
-      // if the value isn't out of limit then allow action,
-      // increment value, and reset expiration time
-      return psetexAsync(rateId, expireMilisecs, 1 + rateScore).then(() =>
-        next()
-      );
-    })
-    .catch(err => {
-      res.status(500).send(err);
-      return res.end();
+      return next();
     });
+  });
 };
