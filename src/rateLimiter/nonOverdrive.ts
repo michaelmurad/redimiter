@@ -7,7 +7,6 @@ const nonOverdrive = (
   redis: RedisClient,
   rateLimit: number,
   expireMilisecs: number,
-  increaseByInc: number,
   res: Response,
   next: NextFunction
 ) => {
@@ -26,11 +25,9 @@ const nonOverdrive = (
       }
       // if the value isn't out of limit then allow action,
       // increment value, and reset expiration time
-      return psetexAsync(
-        rateId,
-        expireMilisecs,
-        increaseByInc + rateScore
-      ).then(() => next());
+      return psetexAsync(rateId, expireMilisecs, 1 + rateScore).then(() =>
+        next()
+      );
     })
     .catch(err => {
       res.status(500).send(err);
