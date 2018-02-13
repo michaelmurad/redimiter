@@ -28,11 +28,11 @@ describe("Versions of Redis Client", () => {
     const nR = redis.createClient();
     io.set(testString, testStringValue);
     nR.set(testString2, testStringValue + 1);
-    const nRe = promisify(nR.get).bind(nR);
+    const nRAsync = promisify(nR.get).bind(nR);
 
-    const nRed = await nRe(testString);
+    const nRed = await nRAsync(testString);
     const ioRed = await io.get(testString);
-    const nRed2 = await nRe(testString2);
+    const nRed2 = await nRAsync(testString2);
     const ioRed2 = await io.get(testString2);
     expect(nRed).to.be.equal("388");
     expect(ioRed).to.be.equal("388");
@@ -126,6 +126,8 @@ describe("redisRateLimiter constructer", () => {
       }
 
       const redimiter = redClient();
+      // const redclear = new Redis();
+      // redclear.flushdb();
       describe(`redisRateLimiter ${cliName} ${name}`, () => {
         describe("redisRateLimiter.rateLimiter() fires as middleware", () => {
           it("should fire call with all args", async () => {
@@ -135,8 +137,7 @@ describe("redisRateLimiter constructer", () => {
               redimiter.rateLimiter({
                 path: "/home",
                 expireMilisecs: 3000,
-                rateLimit: 2000,
-                increaseByInc: 1
+                rateLimit: 2000
               }),
               (req, res) => res.status(200).send("happy")
             );
@@ -234,14 +235,13 @@ describe("redisRateLimiter constructer", () => {
             spyConsole.restore();
           });
         });
-        describe("redisRateLimiter.rateLimiter() ratelimiting", () => {
+        describe("redisRateLimiter.rateLimiter() nonOverdrive ratelimiting", () => {
           it("should allow req if under rate limit", async () => {
             const app = server();
             const home = redimiter.rateLimiter({
               path: "hello",
               expireMilisecs: 3000,
-              rateLimit: 2000,
-              increaseByInc: 1
+              rateLimit: 2000
             });
             app.get("/home", home, (req, res) => res.status(200).send("hello"));
 
@@ -293,6 +293,9 @@ describe("redisRateLimiter constructer", () => {
             expect(response2.text).to.equal("howdy");
             expect(response3.status).to.equal(403);
             expect(response3.text).to.not.equal("howdy");
+            expect(response3.text).to.be.equal(
+              '{"error":"You are doing this too much, try again in a few minutes"}'
+            );
           });
           it("should rate limit then after allotted time allow req again", done => {
             const app = server();
@@ -317,6 +320,9 @@ describe("redisRateLimiter constructer", () => {
               expect(response2.text).to.equal("moo");
               expect(response3.status).to.equal(403);
               expect(response3.text).to.not.equal("moo");
+              expect(response3.text).to.be.equal(
+                '{"error":"You are doing this too much, try again in a few minutes"}'
+              );
             })();
 
             setTimeout(async () => {
@@ -373,6 +379,81 @@ describe("redisRateLimiter constructer", () => {
 
               done();
             }, 1001);
+          });
+        });
+        describe("redisRateLimiter.rateLimiter() overdrive ratelimiting", () => {
+          describe("should work if overdrive is added", () => {
+            it("should allow req if under rate limit", async () => {
+              const app = server();
+              const home = redimiter.rateLimiter({
+                path: "romeo",
+                expireMilisecs: 3000,
+                rateLimit: 10,
+                overDrive: true
+              });
+              app.get("/romeo", home, (req, res) =>
+                res.status(200).send("hellooo")
+              );
+
+              const response = await request(app).get("/romeo");
+
+              expect(response.status).to.be.equal(200);
+              expect(response.text).to.be.equal("hellooo");
+            });
+            it("should rate limit", async () => {
+              const app = server();
+              const home = redimiter.rateLimiter({
+                path: "juliet",
+                expireMilisecs: 20,
+                rateLimit: 1,
+                overDrive: true
+              });
+              app.get("/juliet", home, (req, res) =>
+                res.status(200).send("hellooo")
+              );
+
+              const response = await request(app).get("/juliet");
+              const response2 = await request(app).get("/juliet");
+
+              expect(response.status).to.be.equal(200);
+              expect(response.text).to.be.equal("hellooo");
+
+              expect(response2.status).to.be.equal(403);
+              expect(response2.text).to.be.equal(
+                '{"error":"You are doing this too much, try again in a little bit"}'
+              );
+            });
+            it("should rate limit into overdrive", async () => {
+              const app = server();
+              const now = Math.round(Date.now()) / 1000;
+              const home = redimiter.rateLimiter({
+                path: `juju${cliName}${name}${now.toString()}`,
+                expireMilisecs: 1000,
+                rateLimit: 1,
+                overDrive: true
+              });
+              app.get("/juju", home, (req, res) =>
+                res.status(200).send("hellooo")
+              );
+              let index = 0;
+              const response = await request(app).get("/juju");
+              expect(response.status).to.be.equal(200);
+              expect(response.text).to.be.equal("hellooo");
+              while (index < 8) {
+                const response = await request(app).get("/juju");
+                expect(response.status).to.be.equal(403);
+                expect(response.text).to.be.equal(
+                  '{"error":"You are doing this too much, try again in a little bit"}'
+                );
+                index += 1;
+              }
+
+              const responseLast = await request(app).get("/juju");
+              expect(responseLast.status).to.be.equal(403);
+              expect(responseLast.text).to.be.equal(
+                '{"error":"You are doing this WAY too much, try again much later"}'
+              );
+            });
           });
         });
       });
