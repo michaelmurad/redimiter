@@ -126,8 +126,6 @@ describe("redisRateLimiter constructer", () => {
       }
 
       const redimiter = redClient();
-      // const redclear = new Redis();
-      // redclear.flushdb();
       describe(`redisRateLimiter ${cliName} ${name}`, () => {
         describe("redisRateLimiter.rateLimiter() fires as middleware", () => {
           it("should fire call with all args", async () => {
@@ -439,7 +437,7 @@ describe("redisRateLimiter constructer", () => {
               const response = await request(app).get("/juju");
               expect(response.status).to.be.equal(200);
               expect(response.text).to.be.equal("hellooo");
-              while (index < 8) {
+              while (index < 9) {
                 const response = await request(app).get("/juju");
                 expect(response.status).to.be.equal(403);
                 expect(response.text).to.be.equal(
@@ -453,6 +451,54 @@ describe("redisRateLimiter constructer", () => {
               expect(responseLast.text).to.be.equal(
                 '{"error":"You are doing this WAY too much, try again much later"}'
               );
+            });
+            it("should only allow 10 requests", async () => {
+              const sent = spy();
+              const app = server();
+              const now = Math.round(Date.now()) / 1000;
+              const home = redimiter.rateLimiter({
+                path: `sea${cliName}${name}${now.toString()}`,
+                expireMilisecs: 40000,
+                rateLimit: 10,
+                overDrive: false
+              });
+              app.get("/sea", home, (req, res) => {
+                sent();
+                res.status(200).send("lol");
+              });
+              let index = 0;
+              while (index < 150) {
+                const response = await request(app).get("/sea");
+                index += 1;
+              }
+              // const response = await request(app).get("/sea");
+              // expect(response.status).to.be.equal(200);
+              // expect(response.text).to.be.equal("lol");
+              expect(sent.callCount).to.be.equal(10);
+            });
+            it("should not allow 150 requests", async () => {
+              const sent = spy();
+              const app = server();
+              const now = Math.round(Date.now()) / 1000;
+              const home = redimiter.rateLimiter({
+                path: `tree${cliName}${name}${now.toString()}`,
+                expireMilisecs: 40,
+                rateLimit: 10,
+                overDrive: false
+              });
+              app.get("/tree", home, (req, res) => {
+                sent();
+                res.status(200).send("lol");
+              });
+              let index = 0;
+              while (index < 150) {
+                const response = await request(app).get("/tree");
+                index += 1;
+              }
+              // const response = await request(app).get("/sea");
+              // expect(response.status).to.be.equal(200);
+              // expect(response.text).to.be.equal("lol");
+              expect(sent.callCount).to.be.below(100);
             });
           });
         });
