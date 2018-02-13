@@ -6,7 +6,7 @@
   "scripts": {
     "compile": "tsc",
     "pretest": "npm run compile",
-    "test": "mocha ./dist/test/*.js"
+    "test": "mocha --check-leaks ./dist/test/*.js --exit"
   },
   "keywords": [
     "redis",
