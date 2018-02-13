@@ -31,13 +31,7 @@ export default class Redimiter {
       console.error("You need to add a redis client");
     }
   }
-  /**
-   * @param {string} [path = Math.round(new Date().getTime() / 1000).toString()] Redis key that will be appended to the ip that will store client request rate. REQUIRED
-   * @param {number} [expireMilisecs = 10000] Miliseconds in which the rate limiter will expire after last client request: DEFAULT 10000
-   * @param {number} [rateLimit = 10] the limit of requests allowed within the expireMilisecs timeframe. DEFAULT 10
-   * @param {number} [overDrive = false] Allows further rate limiting if client keeps sending requests. DEFAULT false
-   * @return {function}
-   */
+
   public rateLimiter = (
     options: RateLimiterOptions = {
       path: Math.round(new Date().getTime() / 1000).toString(),
@@ -45,7 +39,7 @@ export default class Redimiter {
       rateLimit: 10,
       overDrive: false
     }
-  ) =>
+  ): Function =>
     // {/** Redis key that will be appended to the ip that will store client request rate.*/
     //   path: string = Math.round(new Date().getTime() / 1000).toString(),
     //   /** Miliseconds in which the rate limiter will expire after last client request: DEFAULT 10000 */
@@ -76,7 +70,7 @@ export default class Redimiter {
       const ip = req.ip;
       if (!ip) {
         res.status(500).send("No ip address");
-        return res.end(null);
+        return res.end();
       }
       const rateId: string = `${ip}:${key}`;
       // rateId will be the key and its value will be the score we use to compare rateLimit
