@@ -1,17 +1,17 @@
 import { RedisOptions, Redis as RedisClient } from "ioredis";
 import { NextFunction, Request, Response } from "express";
-import { nonOverdrive, overdrive } from "./rateLimiter";
+import { nonOverdrive, overDrive } from "./rateLimiter";
 import { nonOverdrivePromise, overdrivePromise } from "./rateLimiterPromise";
 
 export interface RateLimiterOptions {
   /** Redis key that will be appended to the ip that will store client request rate.*/
   path: string;
   /** Miliseconds in which the rate limiter will expire after last client request: DEFAULT 10000 */
-  expireMilisecs: number;
-  /** the limit of requests allowed within the expireMilisecs timeframe. DEFAULT 10 */
-  rateLimit: number;
+  expire: number;
+  /** the limit of requests allowed within the expire timeframe. DEFAULT 10 */
+  limit: number;
   /** Allows further rate limiting if client keeps sending requests. DEFAULT false */
-  overDrive: boolean;
+  overdrive: boolean;
 }
 export interface RateLimiterPromiseOptions {
   /** Redis key that will be appended to the ip that will store client request rate.*/
@@ -19,11 +19,11 @@ export interface RateLimiterPromiseOptions {
   /** Redis key that will be appended to the ip that will store client request rate.*/
   action: string;
   /** Miliseconds in which the rate limiter will expire after last client request: DEFAULT 10000 */
-  expireMilisecs: number;
-  /** the limit of requests allowed within the expireMilisecs timeframe. DEFAULT 10 */
-  rateLimit: number;
+  expire: number;
+  /** the limit of requests allowed within the expire timeframe. DEFAULT 10 */
+  limit: number;
   /** Allows further rate limiting if client keeps sending requests. DEFAULT false */
-  overDrive: boolean;
+  overdrive: boolean;
 }
 
 /**
@@ -48,27 +48,27 @@ export default class Redimiter {
   public rateLimiter = (
     options: RateLimiterOptions = {
       path: Math.round(new Date().getTime() / 1000).toString(),
-      expireMilisecs: 1000,
-      rateLimit: 10,
-      overDrive: false
+      expire: 1000,
+      limit: 10,
+      overdrive: false
     }
   ): Function =>
     // {/** Redis key that will be appended to the ip that will store client request rate.*/
     //   path: string = Math.round(new Date().getTime() / 1000).toString(),
     //   /** Miliseconds in which the rate limiter will expire after last client request: DEFAULT 10000 */
-    //   expireMilisecs = 1000,
-    //   /** the limit of requests allowed within the expireMilisecs timeframe. DEFAULT 10 */
-    //   rateLimit = 10,
+    //   expire = 1000,
+    //   /** the limit of requests allowed within the expire timeframe. DEFAULT 10 */
+    //   limit = 10,
     //   /** the rate at which the client requests are increased. DEFAULT 1 */
     //   increaseByInc = 1,
     //   /** Allows further rate limiting if client keeps sending requests. DEFAULT false */
-    //   overDrive = false}
+    //   overdrive = false}
     (req: Request, res, next: NextFunction): Function => {
       const path =
         options.path || Math.round(new Date().getTime() / 1000).toString();
-      const expireMilisecs = options.expireMilisecs || 1000;
-      const rateLimit = options.rateLimit || 10;
-      const overDrive = options.overDrive;
+      const expire = options.expire || 1000;
+      const limit = options.limit || 10;
+      const overdrive = options.overdrive;
       let key: string = path;
       if (typeof path !== "string") {
         console.error(
@@ -76,7 +76,7 @@ export default class Redimiter {
         );
         key = key.toString();
       }
-      if (typeof expireMilisecs !== "number" || typeof rateLimit !== "number") {
+      if (typeof expire !== "number" || typeof limit !== "number") {
         throw new Error("arg must be a number");
       }
       const redis: RedisClient = this.redisClient;
@@ -86,19 +86,12 @@ export default class Redimiter {
         return res.end();
       }
       const rateId: string = `${ip}:${key}`;
-      // rateId will be the key and its value will be the score we use to compare rateLimit
+      // rateId will be the key and its value will be the score we use to compare limit
       // first check to see if value is already out of limit
-      if (!overDrive) {
-        return nonOverdrive(
-          rateId,
-          redis,
-          rateLimit,
-          expireMilisecs,
-          res,
-          next
-        );
+      if (!overdrive) {
+        return nonOverdrive(rateId, redis, limit, expire, res, next);
       }
-      return overdrive(rateId, redis, rateLimit, expireMilisecs, res, next);
+      return overDrive(rateId, redis, limit, expire, res, next);
     };
   public rateLimiterPromise: Function = (
     options: RateLimiterPromiseOptions
@@ -107,8 +100,8 @@ export default class Redimiter {
       const redis: RedisClient = this.redisClient;
       const username = options.username;
       const action = options.action;
-      const expireMilisecs = options.expireMilisecs || 1000;
-      const rateLimit = options.rateLimit || 10;
+      const expire = options.expire || 1000;
+      const limit = options.limit || 10;
       if (!username) {
         reject({ error: "there is no username, please set options.username" });
       }
@@ -117,23 +110,16 @@ export default class Redimiter {
       }
       const rateId: string = `${username}:${action}`;
       console.log(rateId);
-      if (!options.overDrive) {
+      if (!options.overdrive) {
         return nonOverdrivePromise(
           rateId,
           redis,
-          rateLimit,
-          expireMilisecs,
+          limit,
+          expire,
           reject,
           resolve
         );
       }
-      return overdrivePromise(
-        rateId,
-        redis,
-        rateLimit,
-        expireMilisecs,
-        reject,
-        resolve
-      );
+      return overdrivePromise(rateId, redis, limit, expire, reject, resolve);
     });
 }

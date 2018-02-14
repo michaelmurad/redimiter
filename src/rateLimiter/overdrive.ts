@@ -6,8 +6,8 @@ import { rateError, overdriveRateErr } from "../errors";
 export default (
   rateId: string,
   redis: RedisClient,
-  rateLimit: number,
-  expireMilisecs: number,
+  limit: number,
+  expire: number,
   res: Response,
   next: NextFunction
 ) => {
@@ -22,20 +22,20 @@ export default (
       return errorFunc(err);
     }
     console.log("get result: ", score);
-    // if the score is over 10x the rateLimit it will simply block it
-    if (score > rateLimit * 10) {
+    // if the score is over 10x the limit it will simply block it
+    if (score > limit * 10) {
       console.log("blocked");
       res.status(403).send(overdriveRateErr);
       return res.end();
     }
     // if the value is 10x the limit
     // this will block the action for 1000x the expire time
-    if (score === rateLimit * 10) {
+    if (score === limit * 10) {
       console.log("ratelimit * 10");
       return redis
         .multi()
         .rpushx(rateId, request)
-        .pexpire(rateId, expireMilisecs * 1000)
+        .pexpire(rateId, expire * 1000)
         .exec((execErr, _) => {
           if (execErr) {
             console.log("execErr");
@@ -46,7 +46,7 @@ export default (
         });
     }
     // otherwise this will block the action and still incr score
-    if (score >= rateLimit) {
+    if (score >= limit) {
       console.log("regular block");
       return redis.rpushx(rateId, request, (rpushErr, _) => {
         if (rpushErr) {
@@ -62,7 +62,7 @@ export default (
       return redis
         .multi()
         .rpush(rateId, request)
-        .pexpire(rateId, expireMilisecs)
+        .pexpire(rateId, expire)
         .exec((execErr, _) => {
           if (execErr) {
             console.log("execErr");

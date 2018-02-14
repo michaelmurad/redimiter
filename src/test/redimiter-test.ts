@@ -151,8 +151,8 @@ describe("redisRateLimiter constructer", () => {
               "/home",
               redimiter.rateLimiter({
                 path: "/home",
-                expireMilisecs: 3000,
-                rateLimit: 2000
+                expire: 3000,
+                limit: 2000
               }),
               (req, res) => res.status(200).send("happy")
             );
@@ -175,7 +175,7 @@ describe("redisRateLimiter constructer", () => {
             const app = server();
             app.get(
               "/moon",
-              redimiter.rateLimiter({ path: "moon", expireMilisecs: 3000 }),
+              redimiter.rateLimiter({ path: "moon", expire: 3000 }),
               (req, res) => res.status(200).send("moon")
             );
             const response = await request(app).get("/moon");
@@ -188,8 +188,8 @@ describe("redisRateLimiter constructer", () => {
               "/sun",
               redimiter.rateLimiter({
                 path: "sun",
-                expireMilisecs: 3000,
-                rateLimit: 10
+                expire: 3000,
+                limit: 10
               }),
               (req, res) => res.status(200).send("sun")
             );
@@ -233,7 +233,7 @@ describe("redisRateLimiter constructer", () => {
             const app = server();
             app.get(
               "/uh",
-              redimiter.rateLimiter({ path: 90, expireMilisecs: "ha" }),
+              redimiter.rateLimiter({ path: 90, expire: "ha" }),
               (req, res) => res.status(200).send("uh")
             );
 
@@ -241,9 +241,9 @@ describe("redisRateLimiter constructer", () => {
 
             expect(response.status).to.equal(500);
             expect(response.text).to.not.equal("uh");
-            expect(
-              redimiter.rateLimiter({ path: 90, expireMilisecs: "ha" })
-            ).to.throw("arg must be a number");
+            expect(redimiter.rateLimiter({ path: 90, expire: "ha" })).to.throw(
+              "arg must be a number"
+            );
             expect(spyConsole.args[0][0]).to.equal(
               "you need to add a string parameter to your rateLimiter('url') arg."
             );
@@ -255,8 +255,8 @@ describe("redisRateLimiter constructer", () => {
             const app = server();
             const home = redimiter.rateLimiter({
               path: "hello",
-              expireMilisecs: 3000,
-              rateLimit: 2000
+              expire: 3000,
+              limit: 2000
             });
             app.get("/home", home, (req, res) => res.status(200).send("hello"));
 
@@ -292,8 +292,8 @@ describe("redisRateLimiter constructer", () => {
               "/howdy",
               redimiter.rateLimiter({
                 path: `howdy${name}${cliName}`,
-                expireMilisecs: 3000,
-                rateLimit: 2
+                expire: 3000,
+                limit: 2
               }),
               (req, res) => res.status(200).send("howdy")
             );
@@ -319,8 +319,8 @@ describe("redisRateLimiter constructer", () => {
               "/moo",
               redimiter.rateLimiter({
                 path: `moo${name}${cliName}`,
-                expireMilisecs: 50,
-                rateLimit: 2
+                expire: 50,
+                limit: 2
               }),
               (req, res) => res.status(200).send("moo")
             );
@@ -371,12 +371,12 @@ describe("redisRateLimiter constructer", () => {
               done();
             }, 1001);
           });
-          it("should rate limit 5 under one second with rateLimit: 5 args", done => {
+          it("should rate limit 5 under one second with limit: 5 args", done => {
             setTimeout(async () => {
               const app = server();
               const { rateLimiter } = redimiter;
               // const getLimiter = rateLimiter();
-              app.get(`/oo`, rateLimiter({ rateLimit: 5 }), (req, res) =>
+              app.get(`/oo`, rateLimiter({ limit: 5 }), (req, res) =>
                 res.status(200).send("oo")
               );
               let index = 0;
@@ -401,9 +401,9 @@ describe("redisRateLimiter constructer", () => {
               const app = server();
               const home = redimiter.rateLimiter({
                 path: "romeo",
-                expireMilisecs: 3000,
-                rateLimit: 10,
-                overDrive: true
+                expire: 3000,
+                limit: 10,
+                overdrive: true
               });
               app.get("/romeo", home, (req, res) =>
                 res.status(200).send("hellooo")
@@ -418,9 +418,9 @@ describe("redisRateLimiter constructer", () => {
               const app = server();
               const home = redimiter.rateLimiter({
                 path: "juliet",
-                expireMilisecs: 20,
-                rateLimit: 1,
-                overDrive: true
+                expire: 20,
+                limit: 1,
+                overdrive: true
               });
               app.get("/juliet", home, (req, res) =>
                 res.status(200).send("hellooo")
@@ -442,9 +442,9 @@ describe("redisRateLimiter constructer", () => {
               const now = Math.round(Date.now() / 1000).toString();
               const home = redimiter.rateLimiter({
                 path: `juju${cliName}${name}${now}`,
-                expireMilisecs: 1000,
-                rateLimit: 1,
-                overDrive: true
+                expire: 1000,
+                limit: 1,
+                overdrive: true
               });
               app.get("/juju", home, (req, res) =>
                 res.status(200).send("hellooo")
@@ -474,9 +474,9 @@ describe("redisRateLimiter constructer", () => {
               const now = Math.round(Date.now() / 1000).toString();
               const home = redimiter.rateLimiter({
                 path: `sea${cliName}${name}${now}`,
-                expireMilisecs: 40000,
-                rateLimit: 10,
-                overDrive: false
+                expire: 40000,
+                limit: 10,
+                overdrive: false
               });
               app.get("/sea", home, (req, res) => {
                 sent();
@@ -498,9 +498,9 @@ describe("redisRateLimiter constructer", () => {
               const now = Math.round(Date.now() / 1000).toString();
               const home = redimiter.rateLimiter({
                 path: `tree${cliName}${name}${now}`,
-                expireMilisecs: 40,
-                rateLimit: 10,
-                overDrive: false
+                expire: 40,
+                limit: 10,
+                overdrive: false
               });
               app.get("/tree", home, (req, res) => {
                 sent();
@@ -539,8 +539,8 @@ describe("redisRateLimiter constructer", () => {
         const home = {
           username: "romeo" + cliName,
           action: "lol",
-          expireMilisecs: 3000,
-          rateLimit: 10
+          expire: 3000,
+          limit: 10
         };
 
         const response = await rateLimiterPromise(home);
@@ -550,8 +550,8 @@ describe("redisRateLimiter constructer", () => {
       it("should throw error if no username", async () => {
         const home = {
           action: "lol",
-          expireMilisecs: 3000,
-          rateLimit: 10
+          expire: 3000,
+          limit: 10
         };
         let err;
         let data;
@@ -570,8 +570,8 @@ describe("redisRateLimiter constructer", () => {
       it("should throw error if no action", async () => {
         const home = {
           username: "nooooooo",
-          expireMilisecs: 3000,
-          rateLimit: 10
+          expire: 3000,
+          limit: 10
         };
         let err;
         let data;
@@ -587,7 +587,7 @@ describe("redisRateLimiter constructer", () => {
         );
         expect(data).to.be.an("undefined");
       });
-      it("should allow 10 requests if rateLimit is default", async () => {
+      it("should allow 10 requests if limit is default", async () => {
         const username = Math.round(Date.now() / 1000).toString();
         const options = {
           username,
@@ -616,13 +616,13 @@ describe("redisRateLimiter constructer", () => {
         expect(data).to.be.true;
         expect(data10).to.be.true;
       });
-      it("should allow x requests if rateLimit is x", async () => {
+      it("should allow x requests if limit is x", async () => {
         const username = Math.round(Date.now() / 1000).toString();
-        const rateLimit = Math.round(Math.random() * 10) + 1;
+        const limit = Math.round(Math.random() * 10) + 1;
         const options = {
           username,
           action: `${cliName}mooso`,
-          rateLimit
+          limit
         };
 
         let err;
@@ -631,7 +631,7 @@ describe("redisRateLimiter constructer", () => {
 
         try {
           let index = 0;
-          while (index < rateLimit) {
+          while (index < limit) {
             const response2 = await rateLimiterPromise(options);
             expect(response2).to.be.true;
             index += 1;
@@ -652,7 +652,7 @@ describe("redisRateLimiter constructer", () => {
           "You are doing this too much, try again in a little bit"
         );
       });
-      it("should throw error if over rateLimit", async () => {
+      it("should throw error if over limit", async () => {
         const username = Math.round(Date.now() / 1000).toString();
         const options = {
           username,
@@ -688,8 +688,8 @@ describe("redisRateLimiter constructer", () => {
         const options = {
           username,
           action: `${cliName}mo`,
-          expireMilisecs: 20,
-          rateLimit: 1
+          expire: 20,
+          limit: 1
         };
 
         (async function firstTests() {
@@ -738,9 +738,9 @@ describe("redisRateLimiter constructer", () => {
         const home = {
           username: "romeoa" + cliName,
           action: "lol",
-          expireMilisecs: 3000,
-          rateLimit: 10,
-          overDrive: true
+          expire: 3000,
+          limit: 10,
+          overdrive: true
         };
 
         const response = await rateLimiterPromise(home);
@@ -750,9 +750,9 @@ describe("redisRateLimiter constructer", () => {
       it("should throw error if no username", async () => {
         const home = {
           action: "lol",
-          expireMilisecs: 3000,
-          rateLimit: 10,
-          overDrive: true
+          expire: 3000,
+          limit: 10,
+          overdrive: true
         };
         let err;
         let data;
@@ -771,9 +771,9 @@ describe("redisRateLimiter constructer", () => {
       it("should throw error if no action", async () => {
         const home = {
           username: "noooooooa",
-          expireMilisecs: 3000,
-          rateLimit: 10,
-          overDrive: true
+          expire: 3000,
+          limit: 10,
+          overdrive: true
         };
         let err;
         let data;
@@ -789,12 +789,12 @@ describe("redisRateLimiter constructer", () => {
         );
         expect(data).to.be.an("undefined");
       });
-      it("should allow 10 requests if rateLimit is default", async () => {
+      it("should allow 10 requests if limit is default", async () => {
         const username = Math.round(Date.now() / 1000).toString();
         const options = {
           username,
           action: `${cliName}moooa`,
-          overDrive: true
+          overdrive: true
         };
 
         let err;
@@ -819,14 +819,14 @@ describe("redisRateLimiter constructer", () => {
         expect(data).to.be.true;
         expect(data10).to.be.true;
       });
-      it("should allow x requests if rateLimit is x", async () => {
+      it("should allow x requests if limit is x", async () => {
         const username = Math.round(Date.now() / 1000).toString();
-        const rateLimit = Math.round(Math.random() * 10) + 1;
+        const limit = Math.round(Math.random() * 10) + 1;
         const options = {
           username,
           action: `${cliName}moosoa`,
-          rateLimit,
-          overDrive: true
+          limit,
+          overdrive: true
         };
 
         let err;
@@ -835,7 +835,7 @@ describe("redisRateLimiter constructer", () => {
 
         try {
           let index = 0;
-          while (index < rateLimit) {
+          while (index < limit) {
             const response2 = await rateLimiterPromise(options);
             expect(response2).to.be.true;
             index += 1;
@@ -856,12 +856,12 @@ describe("redisRateLimiter constructer", () => {
           "You are doing this too much, try again in a little bit"
         );
       });
-      it("should throw error if over rateLimit", async () => {
+      it("should throw error if over limit", async () => {
         const username = Math.round(Date.now() / 1000).toString();
         const options = {
           username,
           action: `${cliName}mooopa`,
-          overDrive: true
+          overdrive: true
         };
 
         let err;
@@ -893,9 +893,9 @@ describe("redisRateLimiter constructer", () => {
         const options = {
           username,
           action: `${cliName}moa`,
-          expireMilisecs: 20,
-          rateLimit: 1,
-          overDrive: true
+          expire: 20,
+          limit: 1,
+          overdrive: true
         };
 
         (async function firstTests() {
@@ -941,22 +941,22 @@ describe("redisRateLimiter constructer", () => {
       it("should go into overdrive", async () => {
         const username = Math.round(Date.now() / 1000).toString();
         const fired = spy();
-        const rateLimit = 1;
-        const expireMilisecs = 100;
+        const limit = 1;
+        const expire = 100;
         const options = {
           username,
           action: `${cliName}moosoa`,
-          overDrive: true,
-          rateLimit,
-          expireMilisecs
+          overdrive: true,
+          limit,
+          expire
         };
 
         let err;
         let index = 0;
 
-        while (index < rateLimit * 10) {
+        while (index < limit * 10) {
           try {
-            while (index < rateLimit * 10) {
+            while (index < limit * 10) {
               const response = await rateLimiterPromise(options);
             }
           } catch (error) {

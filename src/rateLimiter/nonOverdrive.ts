@@ -6,8 +6,8 @@ import { rateError } from "../errors";
 export default (
   rateId: string,
   redis: RedisClient,
-  rateLimit: number,
-  expireMilisecs: number,
+  limit: number,
+  expire: number,
   res: Response,
   next: NextFunction
 ) => {
@@ -23,14 +23,14 @@ export default (
       console.log("err");
       return errorFunc(err);
     }
-    if (score >= rateLimit) {
+    if (score >= limit) {
       return res.status(403).send(rateError);
     }
     if (!score) {
       return redis
         .multi()
         .rpush(rateId, request)
-        .pexpire(rateId, expireMilisecs)
+        .pexpire(rateId, expire)
         .exec((execErr, _) => {
           if (execErr) {
             console.log("execErr");
