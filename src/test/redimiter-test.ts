@@ -19,25 +19,39 @@ const { describe, it, beforeEach, afterEach } = mocha;
 
 // chai.use(chaiAsPromised);
 
-describe("Versions of Redis Client", () => {
+describe("Redis Client compatability", () => {
+  it("should set and return 'OK'", async () => {
+    const io = new Redis();
+    const testString = "testString123";
+    const testString2 = "afdasd";
+    const testStringValue = "388";
+    const nR = redis.createClient();
+    const ioRed = await io.set(testString, testStringValue, "PX", 30000);
+    const setAsync = promisify(nR.set).bind(nR);
+    const node_redis = await setAsync(
+      testString2,
+      testStringValue,
+      "PX",
+      30000
+    );
+    expect(ioRed).to.equal("OK");
+    expect(node_redis).to.equal("OK");
+  });
   it("should return the same info", async () => {
     const io = new Redis();
     const testString = "testString123";
     const testString2 = "afdasd";
-    const testStringValue = 388;
+    const testStringValue = "388";
     const nR = redis.createClient();
-    io.set(testString, testStringValue);
-    nR.set(testString2, testStringValue + 1);
-    const nRAsync = promisify(nR.get).bind(nR);
-
-    const nRed = await nRAsync(testString);
+    const getAsync = promisify(nR.get).bind(nR);
+    const nRed = await getAsync(testString);
+    const nRed2 = await getAsync(testString2);
     const ioRed = await io.get(testString);
-    const nRed2 = await nRAsync(testString2);
     const ioRed2 = await io.get(testString2);
-    expect(nRed).to.be.equal("388");
-    expect(ioRed).to.be.equal("388");
-    expect(nRed2).to.be.equal("389");
-    expect(ioRed2).to.be.equal("389");
+    expect(ioRed).to.equal("388");
+    expect(nRed).to.equal("388");
+    expect(nRed2).to.equal("388");
+    expect(ioRed2).to.equal("388");
   });
 });
 
@@ -79,13 +93,16 @@ describe("test harness", () => {
 });
 
 describe("redisRateLimiter constructer", () => {
+  it("should be an instance of Redimiter", () => {
+    const r = new Redimiter(new Redis());
+    expect(r).to.be.an.instanceof(Redimiter);
+  });
   it("should console.error an error if no redis client", () => {
     const spyConsole = spy(console, "error");
     const r = new Redimiter(null);
+    expect(r).to.be.an.instanceof(Redimiter);
     expect(spyConsole.callCount).to.equal(1);
-    expect(spyConsole.calledWith("You need to add a redis client")).to.equal(
-      true
-    );
+    expect(spyConsole.calledWith("You need to add a redis client")).to.be.true;
     expect(spyConsole.args[0][0]).to.equal("You need to add a redis client");
     spyConsole.restore();
   });
@@ -94,7 +111,7 @@ describe("redisRateLimiter constructer", () => {
     const spyConsole = spy(console, "error");
     const r = new Redimiter(new Redis({}));
     const t = new Redimiter(redis.createClient());
-    expect(spyConsole.notCalled).to.equal(true);
+    expect(spyConsole.notCalled).to.be.true;
     expect(spyConsole.args[0]).to.equals(undefined);
     spyConsole.restore();
   });
@@ -291,8 +308,8 @@ describe("redisRateLimiter constructer", () => {
             expect(response2.text).to.equal("howdy");
             expect(response3.status).to.equal(403);
             expect(response3.text).to.not.equal("howdy");
-            expect(response3.text).to.be.equal(
-              '{"error":"You are doing this too much, try again in a few minutes"}'
+            expect(response3.text).to.equal(
+              '{"error":"You are doing this too much, try again in a little bit"}'
             );
           });
           it("should rate limit then after allotted time allow req again", done => {
@@ -318,8 +335,8 @@ describe("redisRateLimiter constructer", () => {
               expect(response2.text).to.equal("moo");
               expect(response3.status).to.equal(403);
               expect(response3.text).to.not.equal("moo");
-              expect(response3.text).to.be.equal(
-                '{"error":"You are doing this too much, try again in a few minutes"}'
+              expect(response3.text).to.equal(
+                '{"error":"You are doing this too much, try again in a little bit"}'
               );
             })();
 
@@ -374,7 +391,6 @@ describe("redisRateLimiter constructer", () => {
               const response11 = await request(app).get("/oo");
               expect(response11.status).to.equal(403);
               expect(response11.text).to.not.equal("oo");
-
               done();
             }, 1001);
           });
@@ -395,8 +411,8 @@ describe("redisRateLimiter constructer", () => {
 
               const response = await request(app).get("/romeo");
 
-              expect(response.status).to.be.equal(200);
-              expect(response.text).to.be.equal("hellooo");
+              expect(response.status).to.equal(200);
+              expect(response.text).to.equal("hellooo");
             });
             it("should rate limit", async () => {
               const app = server();
@@ -413,19 +429,19 @@ describe("redisRateLimiter constructer", () => {
               const response = await request(app).get("/juliet");
               const response2 = await request(app).get("/juliet");
 
-              expect(response.status).to.be.equal(200);
-              expect(response.text).to.be.equal("hellooo");
+              expect(response.status).to.equal(200);
+              expect(response.text).to.equal("hellooo");
 
-              expect(response2.status).to.be.equal(403);
-              expect(response2.text).to.be.equal(
+              expect(response2.status).to.equal(403);
+              expect(response2.text).to.equal(
                 '{"error":"You are doing this too much, try again in a little bit"}'
               );
             });
             it("should rate limit into overdrive", async () => {
               const app = server();
-              const now = Math.round(Date.now()) / 1000;
+              const now = Math.round(Date.now() / 1000).toString();
               const home = redimiter.rateLimiter({
-                path: `juju${cliName}${name}${now.toString()}`,
+                path: `juju${cliName}${name}${now}`,
                 expireMilisecs: 1000,
                 rateLimit: 1,
                 overDrive: true
@@ -435,29 +451,29 @@ describe("redisRateLimiter constructer", () => {
               );
               let index = 0;
               const response = await request(app).get("/juju");
-              expect(response.status).to.be.equal(200);
-              expect(response.text).to.be.equal("hellooo");
+              expect(response.status).to.equal(200);
+              expect(response.text).to.equal("hellooo");
               while (index < 9) {
                 const response = await request(app).get("/juju");
-                expect(response.status).to.be.equal(403);
-                expect(response.text).to.be.equal(
+                expect(response.status).to.equal(403);
+                expect(response.text).to.equal(
                   '{"error":"You are doing this too much, try again in a little bit"}'
                 );
                 index += 1;
               }
 
               const responseLast = await request(app).get("/juju");
-              expect(responseLast.status).to.be.equal(403);
-              expect(responseLast.text).to.be.equal(
+              expect(responseLast.status).to.equal(403);
+              expect(responseLast.text).to.equal(
                 '{"error":"You are doing this WAY too much, try again much later"}'
               );
             });
             it("should only allow 10 requests", async () => {
               const sent = spy();
               const app = server();
-              const now = Math.round(Date.now()) / 1000;
+              const now = Math.round(Date.now() / 1000).toString();
               const home = redimiter.rateLimiter({
-                path: `sea${cliName}${name}${now.toString()}`,
+                path: `sea${cliName}${name}${now}`,
                 expireMilisecs: 40000,
                 rateLimit: 10,
                 overDrive: false
@@ -472,16 +488,16 @@ describe("redisRateLimiter constructer", () => {
                 index += 1;
               }
               // const response = await request(app).get("/sea");
-              // expect(response.status).to.be.equal(200);
-              // expect(response.text).to.be.equal("lol");
-              expect(sent.callCount).to.be.equal(10);
+              // expect(response.status).to.equal(200);
+              // expect(response.text).to.equal("lol");
+              expect(sent.callCount).to.equal(10);
             });
             it("should not allow 150 requests", async () => {
               const sent = spy();
               const app = server();
-              const now = Math.round(Date.now()) / 1000;
+              const now = Math.round(Date.now() / 1000).toString();
               const home = redimiter.rateLimiter({
-                path: `tree${cliName}${name}${now.toString()}`,
+                path: `tree${cliName}${name}${now}`,
                 expireMilisecs: 40,
                 rateLimit: 10,
                 overDrive: false
@@ -496,9 +512,9 @@ describe("redisRateLimiter constructer", () => {
                 index += 1;
               }
               // const response = await request(app).get("/sea");
-              // expect(response.status).to.be.equal(200);
-              // expect(response.text).to.be.equal("lol");
-              expect(sent.callCount).to.be.below(100);
+              // expect(response.status).to.equal(200);
+              // expect(response.text).to.equal("lol");
+              expect(sent.callCount).to.below(100);
             });
           });
         });
@@ -506,3 +522,455 @@ describe("redisRateLimiter constructer", () => {
     });
   }
 );
+[[Redis, "ioredis"], [redis, "node_redis"]].forEach(([redcli, cliName]) => {
+  function redClient() {
+    let redimiter;
+    if (cliName === "ioredis") {
+      redimiter = new Redimiter(new redcli());
+    }
+    redimiter = new Redimiter(redcli.createClient());
+    return redimiter;
+  }
+  const redimiter = redClient();
+  const { rateLimiterPromise } = redimiter;
+  describe(`rateLimiterPromise ${cliName}`, () => {
+    describe("nonoverdrive", () => {
+      it("should allow options arg", async () => {
+        const home = {
+          username: "romeo" + cliName,
+          action: "lol",
+          expireMilisecs: 3000,
+          rateLimit: 10
+        };
+
+        const response = await rateLimiterPromise(home);
+
+        expect(response).to.be.true;
+      });
+      it("should throw error if no username", async () => {
+        const home = {
+          action: "lol",
+          expireMilisecs: 3000,
+          rateLimit: 10
+        };
+        let err;
+        let data;
+        try {
+          const response = await rateLimiterPromise(home);
+          data = response;
+        } catch (error) {
+          err = error;
+        }
+
+        expect(err.error).to.equal(
+          "there is no username, please set options.username"
+        );
+        expect(data).to.be.an("undefined");
+      });
+      it("should throw error if no action", async () => {
+        const home = {
+          username: "nooooooo",
+          expireMilisecs: 3000,
+          rateLimit: 10
+        };
+        let err;
+        let data;
+        try {
+          const response = await rateLimiterPromise(home);
+          data = response;
+        } catch (error) {
+          err = error;
+        }
+
+        expect(err.error).to.equal(
+          "there is no action, please set options.action"
+        );
+        expect(data).to.be.an("undefined");
+      });
+      it("should allow 10 requests if rateLimit is default", async () => {
+        const username = Math.round(Date.now() / 1000).toString();
+        const options = {
+          username,
+          action: `${cliName}mooo`
+        };
+
+        let err;
+        let data;
+        let data10;
+
+        try {
+          const response = await rateLimiterPromise(options);
+          data = response;
+          let index = 1;
+          while (index < 9) {
+            const response2 = await rateLimiterPromise(options);
+            index += 1;
+          }
+          const response10 = await rateLimiterPromise(options);
+          data10 = response10;
+        } catch (error) {
+          err = error;
+        }
+
+        expect(err).to.be.an("undefined");
+        expect(data).to.be.true;
+        expect(data10).to.be.true;
+      });
+      it("should allow x requests if rateLimit is x", async () => {
+        const username = Math.round(Date.now() / 1000).toString();
+        const rateLimit = Math.round(Math.random() * 10) + 1;
+        const options = {
+          username,
+          action: `${cliName}mooso`,
+          rateLimit
+        };
+
+        let err;
+        let err2;
+        let data5;
+
+        try {
+          let index = 0;
+          while (index < rateLimit) {
+            const response2 = await rateLimiterPromise(options);
+            expect(response2).to.be.true;
+            index += 1;
+          }
+        } catch (error) {
+          err = error;
+        }
+        try {
+          const response5 = await rateLimiterPromise(options);
+          data5 = response5;
+        } catch (error) {
+          err2 = error;
+        }
+
+        expect(err).to.be.an("undefined");
+        expect(data5).to.be.an("undefined");
+        expect(err2.error).to.equal(
+          "You are doing this too much, try again in a little bit"
+        );
+      });
+      it("should throw error if over rateLimit", async () => {
+        const username = Math.round(Date.now() / 1000).toString();
+        const options = {
+          username,
+          action: `${cliName}mooop`
+        };
+
+        let err;
+        let data;
+        let data10;
+
+        try {
+          const response = await rateLimiterPromise(options);
+          data = response;
+          let index = 1;
+          while (index < 10) {
+            const response2 = await rateLimiterPromise(options);
+            index += 1;
+          }
+          const response10 = await rateLimiterPromise(options);
+          data10 = response10;
+        } catch (error) {
+          err = error;
+        }
+
+        expect(err.error).to.equals(
+          "You are doing this too much, try again in a little bit"
+        );
+        expect(data).to.be.true;
+        expect(data10).to.be.an("undefined");
+      });
+      it("should allow requests again after expire", done => {
+        const username = Math.round(Date.now() / 1000).toString();
+        const options = {
+          username,
+          action: `${cliName}mo`,
+          expireMilisecs: 20,
+          rateLimit: 1
+        };
+
+        (async function firstTests() {
+          let err;
+          let data;
+          let err2;
+          let data2;
+          try {
+            const response = await rateLimiterPromise(options);
+            data = response;
+          } catch (error) {
+            err = error;
+          }
+
+          try {
+            const response2 = await rateLimiterPromise(options);
+            data2 = response2;
+          } catch (error) {
+            err2 = error;
+          }
+          expect(err).to.be.an("undefined");
+          expect(data).to.be.true;
+          expect(data2).to.be.an("undefined");
+          expect(err2.error).to.equal(
+            "You are doing this too much, try again in a little bit"
+          );
+        })();
+
+        setTimeout(async () => {
+          let err3;
+          let data3;
+          try {
+            const response3 = await rateLimiterPromise(options);
+            data3 = response3;
+          } catch (error) {
+            err3 = error;
+          }
+          expect(data3).to.be.true;
+          expect(err3).to.be.an("undefined");
+          done();
+        }, 100);
+      });
+    });
+    describe("overdrive", () => {
+      it("should allow options arg", async () => {
+        const home = {
+          username: "romeoa" + cliName,
+          action: "lol",
+          expireMilisecs: 3000,
+          rateLimit: 10,
+          overDrive: true
+        };
+
+        const response = await rateLimiterPromise(home);
+
+        expect(response).to.be.true;
+      });
+      it("should throw error if no username", async () => {
+        const home = {
+          action: "lol",
+          expireMilisecs: 3000,
+          rateLimit: 10,
+          overDrive: true
+        };
+        let err;
+        let data;
+        try {
+          const response = await rateLimiterPromise(home);
+          data = response;
+        } catch (error) {
+          err = error;
+        }
+
+        expect(err.error).to.equal(
+          "there is no username, please set options.username"
+        );
+        expect(data).to.be.an("undefined");
+      });
+      it("should throw error if no action", async () => {
+        const home = {
+          username: "noooooooa",
+          expireMilisecs: 3000,
+          rateLimit: 10,
+          overDrive: true
+        };
+        let err;
+        let data;
+        try {
+          const response = await rateLimiterPromise(home);
+          data = response;
+        } catch (error) {
+          err = error;
+        }
+
+        expect(err.error).to.equal(
+          "there is no action, please set options.action"
+        );
+        expect(data).to.be.an("undefined");
+      });
+      it("should allow 10 requests if rateLimit is default", async () => {
+        const username = Math.round(Date.now() / 1000).toString();
+        const options = {
+          username,
+          action: `${cliName}moooa`,
+          overDrive: true
+        };
+
+        let err;
+        let data;
+        let data10;
+
+        try {
+          const response = await rateLimiterPromise(options);
+          data = response;
+          let index = 1;
+          while (index < 9) {
+            const response2 = await rateLimiterPromise(options);
+            index += 1;
+          }
+          const response10 = await rateLimiterPromise(options);
+          data10 = response10;
+        } catch (error) {
+          err = error;
+        }
+
+        expect(err).to.be.an("undefined");
+        expect(data).to.be.true;
+        expect(data10).to.be.true;
+      });
+      it("should allow x requests if rateLimit is x", async () => {
+        const username = Math.round(Date.now() / 1000).toString();
+        const rateLimit = Math.round(Math.random() * 10) + 1;
+        const options = {
+          username,
+          action: `${cliName}moosoa`,
+          rateLimit,
+          overDrive: true
+        };
+
+        let err;
+        let err2;
+        let data5;
+
+        try {
+          let index = 0;
+          while (index < rateLimit) {
+            const response2 = await rateLimiterPromise(options);
+            expect(response2).to.be.true;
+            index += 1;
+          }
+        } catch (error) {
+          err = error;
+        }
+        try {
+          const response5 = await rateLimiterPromise(options);
+          data5 = response5;
+        } catch (error) {
+          err2 = error;
+        }
+
+        expect(err).to.be.an("undefined");
+        expect(data5).to.be.an("undefined");
+        expect(err2.error).to.equal(
+          "You are doing this too much, try again in a little bit"
+        );
+      });
+      it("should throw error if over rateLimit", async () => {
+        const username = Math.round(Date.now() / 1000).toString();
+        const options = {
+          username,
+          action: `${cliName}mooopa`,
+          overDrive: true
+        };
+
+        let err;
+        let data;
+        let data10;
+
+        try {
+          const response = await rateLimiterPromise(options);
+          data = response;
+          let index = 1;
+          while (index < 10) {
+            const response2 = await rateLimiterPromise(options);
+            index += 1;
+          }
+          const response10 = await rateLimiterPromise(options);
+          data10 = response10;
+        } catch (error) {
+          err = error;
+        }
+
+        expect(err.error).to.equals(
+          "You are doing this too much, try again in a little bit"
+        );
+        expect(data).to.be.true;
+        expect(data10).to.be.an("undefined");
+      });
+      it("should allow requests again after expire", done => {
+        const username = Math.round(Date.now() / 1000).toString();
+        const options = {
+          username,
+          action: `${cliName}moa`,
+          expireMilisecs: 20,
+          rateLimit: 1,
+          overDrive: true
+        };
+
+        (async function firstTests() {
+          let err;
+          let data;
+          let err2;
+          let data2;
+          try {
+            const response = await rateLimiterPromise(options);
+            data = response;
+          } catch (error) {
+            err = error;
+          }
+
+          try {
+            const response2 = await rateLimiterPromise(options);
+            data2 = response2;
+          } catch (error) {
+            err2 = error;
+          }
+          expect(err).to.be.an("undefined");
+          expect(data).to.be.true;
+          expect(data2).to.be.an("undefined");
+          expect(err2.error).to.equal(
+            "You are doing this too much, try again in a little bit"
+          );
+        })();
+
+        setTimeout(async () => {
+          let err3;
+          let data3;
+          try {
+            const response3 = await rateLimiterPromise(options);
+            data3 = response3;
+          } catch (error) {
+            err3 = error;
+          }
+          expect(data3).to.be.true;
+          expect(err3).to.be.an("undefined");
+          done();
+        }, 100);
+      });
+      it("should go into overdrive", async () => {
+        const username = Math.round(Date.now() / 1000).toString();
+        const fired = spy();
+        const rateLimit = 1;
+        const expireMilisecs = 100;
+        const options = {
+          username,
+          action: `${cliName}moosoa`,
+          overDrive: true,
+          rateLimit,
+          expireMilisecs
+        };
+
+        let err;
+        let index = 0;
+
+        while (index < rateLimit * 10) {
+          try {
+            while (index < rateLimit * 10) {
+              const response = await rateLimiterPromise(options);
+            }
+          } catch (error) {
+            err = error;
+          }
+          index += 1;
+          fired();
+        }
+
+        expect(fired.callCount).to.equal(10);
+        expect(err.error).to.equal(
+          "You are doing this WAY too much, try again much later"
+        );
+      });
+    });
+  });
+});
