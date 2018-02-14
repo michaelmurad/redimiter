@@ -20,7 +20,6 @@ export default (
 
   return redis.llen(rateId, (err, score) => {
     if (err) {
-      console.log("err");
       return errorFunc(err);
     }
     if (score >= limit) {
@@ -33,7 +32,6 @@ export default (
         .pexpire(rateId, expire)
         .exec((execErr, _) => {
           if (execErr) {
-            console.log("execErr");
             return errorFunc(execErr);
           }
           return next();
@@ -41,7 +39,6 @@ export default (
     }
     return redis.rpushx(rateId, request, (rpushErr, _) => {
       if (rpushErr) {
-        console.log("rpushErr");
         return errorFunc(rpushErr);
       }
       return next();

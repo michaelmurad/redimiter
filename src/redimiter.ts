@@ -109,7 +109,6 @@ export default class Redimiter {
         reject({ error: "there is no action, please set options.action" });
       }
       const rateId: string = `${username}:${action}`;
-      console.log(rateId);
       if (!options.overdrive) {
         return nonOverdrivePromise(
           rateId,
