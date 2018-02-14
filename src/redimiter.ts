@@ -1,10 +1,23 @@
 import { RedisOptions, Redis as RedisClient } from "ioredis";
 import { NextFunction, Request, Response } from "express";
 import { nonOverdrive, overdrive } from "./rateLimiter";
+import { nonOverdrivePromise, overdrivePromise } from "./rateLimiterPromise";
 
 export interface RateLimiterOptions {
   /** Redis key that will be appended to the ip that will store client request rate.*/
   path: string;
+  /** Miliseconds in which the rate limiter will expire after last client request: DEFAULT 10000 */
+  expireMilisecs: number;
+  /** the limit of requests allowed within the expireMilisecs timeframe. DEFAULT 10 */
+  rateLimit: number;
+  /** Allows further rate limiting if client keeps sending requests. DEFAULT false */
+  overDrive: boolean;
+}
+export interface RateLimiterPromiseOptions {
+  /** Redis key that will be appended to the ip that will store client request rate.*/
+  username: string;
+  /** Redis key that will be appended to the ip that will store client request rate.*/
+  action: string;
   /** Miliseconds in which the rate limiter will expire after last client request: DEFAULT 10000 */
   expireMilisecs: number;
   /** the limit of requests allowed within the expireMilisecs timeframe. DEFAULT 10 */
@@ -88,48 +101,39 @@ export default class Redimiter {
       return overdrive(rateId, redis, rateLimit, expireMilisecs, res, next);
     };
   public rateLimiterPromise: Function = (
-    username: string,
-    action: string,
-    expireMilisecs: number,
-    rateLimit: number,
-    increaseByInc: number
+    options: RateLimiterPromiseOptions
   ): Promise<null> =>
     new Promise((resolve, reject) => {
       const redis: RedisClient = this.redisClient;
-      const rateId: string = `${username}:${action}`;
-      console.log(rateId);
+      const username = options.username;
+      const action = options.action;
+      const expireMilisecs = options.expireMilisecs || 1000;
+      const rateLimit = options.rateLimit || 10;
       if (!username) {
-        reject("there is no user");
+        reject({ error: "there is no username, please set options.username" });
       }
       if (!action) {
-        reject("there is no query");
+        reject({ error: "there is no action, please set options.action" });
       }
-      redis
-        .get(rateId)
-        .then(score => {
-          const rateScore = parseInt(score, 10) || 1;
-          if (rateScore > rateLimit * 10) {
-            redis
-              .psetex(rateId, expireMilisecs * 1000, rateScore)
-              .then(() => reject("You are doing this way tooo much"))
-              .catch(err => reject(err));
-          }
-          if (rateScore > rateLimit) {
-            redis
-              .psetex(rateId, expireMilisecs, increaseByInc + rateScore)
-              .then(() =>
-                reject(
-                  "You are doing this way too much, please wait a few minutes."
-                )
-              )
-              .catch(err => err);
-          }
-
-          redis
-            .psetex(rateId, expireMilisecs, increaseByInc + rateScore)
-            .then(() => resolve())
-            .catch(err => reject(err));
-        })
-        .catch(err => reject(err));
+      const rateId: string = `${username}:${action}`;
+      console.log(rateId);
+      if (!options.overDrive) {
+        return nonOverdrivePromise(
+          rateId,
+          redis,
+          rateLimit,
+          expireMilisecs,
+          reject,
+          resolve
+        );
+      }
+      return overdrivePromise(
+        rateId,
+        redis,
+        rateLimit,
+        expireMilisecs,
+        reject,
+        resolve
+      );
     });
 }
