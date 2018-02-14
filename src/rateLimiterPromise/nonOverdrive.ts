@@ -21,7 +21,7 @@ export default (
     if (score >= limit) {
       return reject(rateError);
     }
-    // if there is no score it creates one and sets expire
+    // if there is no score it creates a list, adds an item and sets expire
     if (!score) {
       return redis
         .multi()
@@ -34,8 +34,8 @@ export default (
           return resolve(true);
         });
     }
-    // if it exists and is below the limit it ill add an item
-    // and increase the score
+    // if list exists and its item count is below the limit,
+    // it will add an itemand increase the score
     return redis.rpushx(rateId, request, (rpushErr, _) => {
       if (rpushErr) {
         return reject(rpushErr);
