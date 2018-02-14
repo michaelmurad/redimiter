@@ -234,7 +234,7 @@ redimiter.rateLimiterPromise(username,action?,  expire?, limit?, overdrive?)
 
 ### examples
 
-This works much like .rateLimiter() only here you need to specify the `username` and `action`. If the client is over the limit, the promise will reject with an error and the .then action will not be called.
+This works much like .rateLimiter() only here you need to specify the `username` and `action`. If the client is over the limit, the promise will reject with an error and the `.then()` will be skipped.
 
 ```javascript
 { rateLimiterPromise } = redimiter

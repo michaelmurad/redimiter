@@ -1,12 +1,9 @@
 import * as chai from "chai";
-import * as chaiAsPromised from "chai-as-promised";
 import * as Redis from "ioredis";
 import * as mocha from "mocha";
 import { spy } from "sinon";
 import { promisify } from "util";
 import redis = require("redis");
-import { stringify } from "querystring";
-import bodyParser from "body-parser";
 import request = require("supertest");
 import express = require("express");
 import express3 = require("express3"); // old but commonly still used
@@ -16,8 +13,6 @@ import { setTimeout } from "timers";
 
 const { expect } = chai;
 const { describe, it, beforeEach, afterEach } = mocha;
-
-// chai.use(chaiAsPromised);
 
 describe("Redis Client compatability", () => {
   it("should set and return 'OK'", async () => {
@@ -52,43 +47,6 @@ describe("Redis Client compatability", () => {
     expect(nRed).to.equal("388");
     expect(nRed2).to.equal("388");
     expect(ioRed2).to.equal("388");
-  });
-});
-
-interface urlParams {
-  [param: string]: any;
-}
-
-function urlString(urlParams: urlParams) {
-  let string = "/graphql";
-  if (urlParams) {
-    string += "?" + stringify(urlParams);
-  }
-  return string;
-}
-
-function promiseTo(fn) {
-  return new Promise((resolve, reject) => {
-    fn((error, result) => (error ? reject(error) : resolve(result)));
-  });
-}
-
-describe("test harness", () => {
-  it("resolves callback promises", async () => {
-    const resolveValue = {};
-    const result = await promiseTo(cb => cb(null, resolveValue));
-    expect(result).to.equal(resolveValue);
-  });
-
-  it("rejects callback promises with errors", async () => {
-    const rejectError = new Error();
-    let caught;
-    try {
-      await promiseTo(cb => cb(rejectError));
-    } catch (error) {
-      caught = error;
-    }
-    expect(caught).to.equal(rejectError);
   });
 });
 

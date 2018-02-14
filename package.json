@@ -7,12 +7,16 @@
     "compile": "tsc",
     "pretest": "npm run compile",
     "test": "mocha --check-leaks ./dist/test/*.js --exit",
-    "testPromise":
-      "npm run compile && mocha --check-leaks --grep rateLimiterPromise  ./dist/test/*.js --exit",
-    "testRedis":
-      "npm run compile && mocha --check-leaks --grep Redis  ./dist/test/*.js --exit"
+    "testPromise": "npm run compile && mocha --check-leaks --grep rateLimiterPromise  ./dist/test/*.js --exit",
+    "testRedis": "npm run compile && mocha --check-leaks --grep Redis  ./dist/test/*.js --exit"
   },
-  "keywords": ["redis", "express", "rate", "limiter", "rate-limiter"],
+  "keywords": [
+    "redis",
+    "express",
+    "rate",
+    "limiter",
+    "rate-limiter"
+  ],
   "author": "Michael Murad",
   "license": "MIT",
   "devDependencies": {
@@ -20,19 +24,17 @@
     "@types/express": "^4.11.1",
     "@types/node": "^9.4.2",
     "@types/sinon": "^4.1.3",
-    "body-parser": "^1.18.2",
     "chai": "^4.1.2",
-    "chai-as-promised": "^7.1.1",
     "express": "^4.16.2",
     "express3": "0.0.0",
     "ioredis": "^3.2.2",
     "mocha": "^5.0.0",
     "prettier": "^1.10.2",
-    "querystring": "^0.2.0",
     "redis": "^2.8.0",
     "sinon": "^4.2.2",
     "supertest": "^3.0.0",
     "typescript": "^2.7.1"
   },
-  "typings": "dist/index.d.ts"
+  "typings": "dist/index.d.ts",
+  "dependencies": {}
 }
