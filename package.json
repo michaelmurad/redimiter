@@ -6,7 +6,11 @@
   "scripts": {
     "compile": "tsc",
     "pretest": "npm run compile",
-    "test": "mocha --check-leaks ./dist/test/*.js --exit"
+    "test": "mocha --check-leaks ./dist/test/*.js --exit",
+    "testPromise":
+      "npm run compile && mocha --check-leaks --grep rateLimiterPromise  ./dist/test/*.js --exit",
+    "testRedis":
+      "npm run compile && mocha --check-leaks --grep Redis  ./dist/test/*.js --exit"
   },
   "keywords": ["redis", "express", "rate", "limiter", "rate-limiter"],
   "author": "Michael Murad",
