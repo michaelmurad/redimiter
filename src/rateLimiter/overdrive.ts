@@ -1,6 +1,7 @@
 import { RedisOptions, Redis as RedisClient } from "ioredis";
 import { NextFunction, Response } from "express";
 import { promisify } from "util";
+import { rateError, overdriveRateErr } from "../errors";
 
 export default (
   rateId: string,
@@ -24,9 +25,7 @@ export default (
     // if the score is over 10x the rateLimit it will simply block it
     if (score > rateLimit * 10) {
       console.log("blocked");
-      res.status(403).send({
-        error: "You are doing this WAY too much, try again much later"
-      });
+      res.status(403).send(overdriveRateErr);
       return res.end();
     }
     // if the value is 10x the limit
@@ -42,9 +41,7 @@ export default (
             console.log("execErr");
             return errorFunc(execErr);
           }
-          res.status(403).send({
-            error: "You are doing this WAY too much, try again much later"
-          });
+          res.status(403).send(overdriveRateErr);
           return res.end();
         });
     }
@@ -56,9 +53,7 @@ export default (
           console.log("rpushErr");
           return errorFunc(rpushErr);
         }
-        res.status(403).send({
-          error: "You are doing this too much, try again in a little bit"
-        });
+        res.status(403).send(rateError);
         return res.end();
       });
     }

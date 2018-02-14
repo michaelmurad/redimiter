@@ -1,6 +1,7 @@
 import { NextFunction, Response } from "express";
 import { RedisOptions, Redis as RedisClient } from "ioredis";
 // import { promisify } from "util";
+import { rateError } from "../errors";
 
 export default (
   rateId: string,
@@ -23,9 +24,7 @@ export default (
       return errorFunc(err);
     }
     if (score >= rateLimit) {
-      return res.status(403).send({
-        error: "You are doing this too much, try again in a few minutes"
-      });
+      return res.status(403).send(rateError);
     }
     if (!score) {
       return redis
