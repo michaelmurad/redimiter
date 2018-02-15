@@ -2,12 +2,11 @@
   "compilerOptions": {
     "target": "es5",
     "sourceMap": true,
-    "noImplicitAny": false,
     "rootDir": "./src",
     "outDir": "./dist",
     "allowSyntheticDefaultImports": true,
     "pretty": true,
-    "removeComments": true,
+    "removeComments": false,
     "declaration": true,
     "lib": ["es6", "esnext"]
   },
