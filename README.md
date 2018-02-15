@@ -49,7 +49,7 @@ You can easily add customizable rate limiting on each path using the rateLimiter
 ```javascript
 app = express();
 
-/*  if you are unfamiliar with es6 destructuring
+/*  if you are unfamiliar with ES6 destructuring
 *   the following line is the equivalent of
 *   const rateLimiter = redimiter.rateLimiter
 */

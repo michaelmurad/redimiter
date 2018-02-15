@@ -1,21 +1,24 @@
 {
   "name": "redimiter",
   "version": "0.1.0",
-  "description": "A redis middleware rate limiter",
+  "description": "A Redis based Express middleware and Node rate limiter",
   "main": "dist/index.js",
   "scripts": {
     "compile": "tsc",
     "pretest": "npm run compile",
     "test": "mocha --check-leaks ./dist/test/*.js --exit",
-    "testPromise": "npm run compile && mocha --check-leaks --grep rateLimiterPromise  ./dist/test/*.js --exit",
-    "testRedis": "npm run compile && mocha --check-leaks --grep Redis  ./dist/test/*.js --exit"
+    "testPromise":
+      "npm run compile && mocha --check-leaks --grep rateLimiterPromise  ./dist/test/*.js --exit",
+    "testRedis":
+      "npm run compile && mocha --check-leaks --grep Redis  ./dist/test/*.js --exit"
   },
   "keywords": [
     "redis",
     "express",
     "rate",
     "limiter",
-    "rate-limiter"
+    "rate-limiter",
+    "middleware"
   ],
   "author": "Michael Murad",
   "license": "MIT",
@@ -25,6 +28,7 @@
     "@types/node": "^9.4.2",
     "@types/sinon": "^4.1.3",
     "chai": "^4.1.2",
+    "chalk": "^2.3.1",
     "express": "^4.16.2",
     "express3": "0.0.0",
     "ioredis": "^3.2.2",
