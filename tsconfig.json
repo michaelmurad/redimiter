@@ -9,7 +9,11 @@
     "pretty": true,
     "removeComments": false,
     "declaration": true,
-    "lib": ["es6", "esnext"]
+    "lib": ["es6", "esnext"],
+    "baseUrl": "src/"
+    // "paths": {
+    //   "*": ["*", "rateLimiter/*", "rateLimiterPromise/*", "errors"]
+    // }
   },
   "exclude": ["node_modules", "dist"]
 }
