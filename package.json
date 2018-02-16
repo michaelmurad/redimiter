@@ -14,7 +14,8 @@
   "scripts": {
     "compile": "tsc",
     "pretest": "npm run compile",
-    "test": "mocha --check-leaks ./dist/test/*.js --exit",
+    "test": "nyc mocha --check-leaks ./dist/test/",
+    "coverage": "nyc report --reporter=text-lcov | coveralls",
     "testPromise":
       "npm run compile && mocha --check-leaks --grep rateLimiterPromise  ./dist/test/*.js --exit",
     "testRedis":
@@ -37,10 +38,12 @@
     "@types/sinon": "^4.1.3",
     "chai": "^4.1.2",
     "chalk": "^2.3.1",
+    "coveralls": "^3.0.0",
     "express": "^4.16.2",
     "express3": "0.0.0",
     "ioredis": "^3.2.2",
     "mocha": "^5.0.0",
+    "nyc": "^11.4.1",
     "prettier": "^1.10.2",
     "redis": "^2.8.0",
     "sinon": "^4.2.2",

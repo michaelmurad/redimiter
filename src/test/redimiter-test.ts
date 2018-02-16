@@ -18,14 +18,15 @@ import {
   rLPUsernameErr,
   rLPActionErr,
   rLPLimitErr,
-  rLPExpErr
+  rLPExpErr,
+  errorFunc
 } from "../errors";
 
 console.log(
   chalk.bgGreen(" YOU NEED TO HAVE A REDIS SERVER RUNNING ON LOCAL MACHINE ")
 );
 const { expect } = chai;
-const { describe, it, beforeEach, afterEach } = mocha;
+const { describe, it, after, beforeEach, afterEach } = mocha;
 
 // YOU NEED TO HAVE A REDIS SERVER RUNNING ON LOCAL MACHINE
 describe("Redis Client compatability", () => {
@@ -45,6 +46,8 @@ describe("Redis Client compatability", () => {
     );
     expect(ioRed).to.equal("OK");
     expect(node_redis).to.equal("OK");
+    io.end();
+    nR.end("flush");
   });
   it("should return the same info", async () => {
     const io = new Redis();
@@ -61,13 +64,31 @@ describe("Redis Client compatability", () => {
     expect(nRed).to.equal("388");
     expect(nRed2).to.equal("388");
     expect(ioRed2).to.equal("388");
+    io.end();
+    nR.end("flush");
+  });
+});
+
+describe("errorfunc", () => {
+  it("should throw an error", async () => {
+    const app = express();
+    const err = "test err";
+    app.get("/path", (req, res) => {
+      return errorFunc(res, err);
+    });
+
+    const response = await request(app).get("/path");
+    expect(response.text).to.be.equal(err);
+    expect(response.status).to.be.equal(500);
   });
 });
 
 describe("redisRateLimiter constructer", () => {
   it("should be an instance of Redimiter", () => {
-    const r = new Redimiter(new Redis());
+    const red = new Redis();
+    const r = new Redimiter(red);
     expect(r).to.be.an.instanceof(Redimiter);
+    red.end();
   });
   it("should console.error an error if no redis client", () => {
     const spyConsole = spy(console, "error");
@@ -81,11 +102,15 @@ describe("redisRateLimiter constructer", () => {
 
   it("should not throw an error with arg", () => {
     const spyConsole = spy(console, "error");
-    const r = new Redimiter(new Redis({}));
-    const t = new Redimiter(redis.createClient());
+    const red = new Redis();
+    const red2 = redis.createClient();
+    const r = new Redimiter(red);
+    const t = new Redimiter(red2);
     expect(spyConsole.notCalled).to.be.true;
     expect(spyConsole.args[0]).to.equals(undefined);
     spyConsole.restore();
+    red.end();
+    red2.end("flush");
   });
 });
 
@@ -109,6 +134,7 @@ describe("redisRateLimiter constructer", () => {
         cliName === "ioredis" ? new redcli() : redcli.createClient();
       const redimiter = new Redimiter(redisClient);
       describe(`redisRateLimiter ${cliName} ${name}`, () => {
+        after(() => redisClient.end("flush"));
         describe("redisRateLimiter.rateLimiter() fires as middleware", () => {
           it("should work with default args", done => {
             // have to wait a second to avoid pollution from previous tests
@@ -124,6 +150,7 @@ describe("redisRateLimiter constructer", () => {
               expect(response.text).to.equal("uh");
               expect(spyConsole.callCount).to.equal(0);
               spyConsole.restore();
+              // redisClient.end("flush");
               done();
             }, 1001);
           });
@@ -382,6 +409,7 @@ describe("redisRateLimiter constructer", () => {
             expect(time).to.be.below(1000);
             expect(response.status).to.equal(200);
             expect(response.text).to.equal("oo");
+            rediss.end();
           });
           it("should rate limit 10 under one second with no args", done => {
             setTimeout(async () => {
@@ -508,6 +536,7 @@ describe("redisRateLimiter constructer", () => {
               expect(responseLast.text).to.equal(
                 '{"name":"Error","message":"You are doing this WAY too much, try again much later"}'
               );
+              redis.end();
             });
             it("should only allow 10 requests", async () => {
               const sent = spy();
@@ -564,17 +593,12 @@ describe("redisRateLimiter constructer", () => {
   }
 );
 [[Redis, "ioredis"], [redis, "node_redis"]].forEach(([redcli, cliName]) => {
-  function redClient() {
-    let redimiter;
-    if (cliName === "ioredis") {
-      redimiter = new Redimiter(new redcli());
-    }
-    redimiter = new Redimiter(redcli.createClient());
-    return redimiter;
-  }
-  const redimiter = redClient();
+  const redisClient =
+    cliName === "ioredis" ? new redcli() : redcli.createClient();
+  const redimiter = new Redimiter(redisClient);
   const { rateLimiterPromise } = redimiter;
   describe(`rateLimiterPromise ${cliName}`, () => {
+    after(() => redisClient.end("flush"));
     describe("nonoverdrive", () => {
       it("should allow options arg", async () => {
         const home = {
@@ -855,6 +879,7 @@ describe("redisRateLimiter constructer", () => {
         expect(data).to.be.true;
         expect(exp).to.be.above(0);
         expect(exp).to.be.below(1001);
+        redis.end();
       });
       it("should allow x requests if limit is x", async () => {
         const username = Math.round(Date.now()).toString();
@@ -1208,6 +1233,7 @@ describe("redisRateLimiter constructer", () => {
         expect(err.message).to.equal(
           "You are doing this WAY too much, try again much later"
         );
+        redis.end();
       });
     });
   });

@@ -1,7 +1,7 @@
 import { NextFunction, Response } from "express";
 import { RedisOptions, Redis as RedisClient } from "ioredis";
 // import { promisify } from "util";
-import { rateError } from "../errors";
+import { rateError, errorFunc } from "../errors";
 
 export default (
   rateId: string,
@@ -13,14 +13,10 @@ export default (
 ) => {
   const request = "r";
 
-  function errorFunc(err) {
-    res.status(500).send(err);
-    return res.end();
-  }
   // gets the list score
   return redis.llen(rateId, (err, score) => {
     if (err) {
-      return errorFunc(err);
+      return errorFunc(res, err);
     }
     // rate limiter kicks into action
     if (score >= limit) {
@@ -34,7 +30,7 @@ export default (
         .pexpire(rateId, expire)
         .exec((execErr, _) => {
           if (execErr) {
-            return errorFunc(execErr);
+            return errorFunc(res, execErr);
           }
           return next();
         });
@@ -43,7 +39,7 @@ export default (
     // it will add an itemand increase the score
     return redis.rpushx(rateId, request, (rpushErr, _) => {
       if (rpushErr) {
-        return errorFunc(rpushErr);
+        return errorFunc(res, rpushErr);
       }
       return next();
     });

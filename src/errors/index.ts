@@ -44,3 +44,8 @@ export const rLPExpErr: Error = {
   name: "Error",
   message: "rateLimiterPromise({ expire }) must be a positive int"
 };
+
+export function errorFunc(res, err) {
+  res.status(500).send(err);
+  return res.end();
+}
