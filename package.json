@@ -1,7 +1,7 @@
 {
   "name": "redimiter",
-  "version": "0.1.0",
-  "description": "A Redis based Express middleware and Node rate limiter",
+  "version": "1.0.0",
+  "description": "A Redis based Express middleware and Node.js rate limiter",
   "main": "dist/index.js",
   "repository": {
     "type": "git",
@@ -19,7 +19,8 @@
     "testPromise":
       "npm run compile && mocha --check-leaks --grep rateLimiterPromise  ./dist/test/*.js --exit",
     "testRedis":
-      "npm run compile && mocha --check-leaks --grep Redis  ./dist/test/*.js --exit"
+      "npm run compile && mocha --check-leaks --grep Redis  ./dist/test/*.js --exit",
+    "prepublish": "npm test"
   },
   "keywords": [
     "redis",
