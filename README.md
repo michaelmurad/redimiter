@@ -1,5 +1,7 @@
 ![assembly2.png](https://s18.postimg.org/b9jh50ieh/assembly2.png)
 
+[![Build Status](https://travis-ci.org/michaelmurad/redimiter.svg?branch=master)](https://travis-ci.org/michaelmurad/redimiter)
+
 A simple, customizable, Redis based [Express](https://expressjs.com/) middleware and [Node](https://nodejs.org) rate limiter.
 
 # Quick Start
