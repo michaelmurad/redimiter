@@ -1,8 +1,11 @@
-![assembly2.png](https://s18.postimg.org/b9jh50ieh/assembly2.png)
+<h1>
+	<img width="320" src="https://s18.postimg.org/pkkp7tfqx/redimiter.png" alt="Redimiter">
+</h1>
+
+A simple, customizable, Redis based [Express](https://expressjs.com/) middleware and [Node.js](https://nodejs.org) rate limiter.
 
 [![Build Status](https://travis-ci.org/michaelmurad/redimiter.svg?branch=master)](https://travis-ci.org/michaelmurad/redimiter)
-
-A simple, customizable, Redis based [Express](https://expressjs.com/) middleware and [Node](https://nodejs.org) rate limiter.
+[![Coverage Status](https://coveralls.io/repos/github/michaelmurad/redimiter/badge.svg?branch=master)](https://coveralls.io/github/michaelmurad/redimiter?branch=master)
 
 # Quick Start
 
@@ -51,10 +54,6 @@ You can easily add customizable rate limiting on each path using the rateLimiter
 ```javascript
 app = express();
 
-/*  if you are unfamiliar with ES6 destructuring
-*   the following line is the equivalent of
-*   const rateLimiter = redimiter.rateLimiter
-*/
 const { rateLimiter } = redimiter;
 
 const pagesOptions = {
@@ -148,13 +147,11 @@ It is tested to work with both ioredis and node_redis clients.
 
 .rateLimiter is an Express middleware.
 
-It stores the ip of the client + optional path (`ip:path`) as a Redis list and for each client request it adds an item. This sum of items can be called the rate score and is compared to the rate limit to determine if the api request should be allowed. Once over the rate limit the score is no longer increased and requests are blocked, unless overdrive is set to true (see below).
-
-The list has an expiration added and when it expires the score starts from scratch after the next client request from the same ip.
+It stores the ip of the client + optional path (`ip:path`) as a Redis list and for each client request it adds an item. This sum of items can be called the rate score and is compared to the rate limit to determine if the client request should be allowed. Once over the rate limit the score is no longer increased and requests are blocked, unless overdrive is set to true (see below). The list has an expiration time and when it expires the the whole process repeats after the next client request from the same ip.
 
 | Option    | Default | Description                                                                                                                                                                                                                                                                                                                   |
 | :-------- | :------ | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| path      | null    | A string that will be appended to the client's ip, used as the key in Redis.                                                                                                                                                                                                                                                  |
+| path      |         | A string that will be appended to the client's ip, used as the key in Redis.                                                                                                                                                                                                                                                  |
 | expire    | 1,000   | The miliseconds before Redis key expires.                                                                                                                                                                                                                                                                                     |
 | limit     | 10      | The number at which client requests will be limited.                                                                                                                                                                                                                                                                          |
 | overdrive | false   | If `true` keeps count of requests after limit has been surpased. At limit x 10 it will set expire to x1000 and then discontinue counting requests and will simpy block them until expiration. Otherwise if `false` once the limit is surpassed requests will not be counted and will simply be blocked until the key expires. |
@@ -181,7 +178,7 @@ With the `path` option defined, the redis key will be `ip:path` and will now be 
 app.get("/pages", rateLimiter({ path: "get/pages" }), getPages);
 ```
 
-With these `path` and `expire` values, it defaults to a max of 10 requests in the specified 3 seconds. The 3 seconds will begin at the client's first request and each subsequent request that happens after the redis key has expired.
+With these `path` and `expire` values, it defaults to a max of 10 requests in the specified 3 seconds. The 3 seconds will begin at the client's first request and each subsequent request that happens when no matching Redis key exists.
 
 ```javascript
 app.get("/pages", rateLimiter({ path: "getPages", expire: 3000 }), getPages);
@@ -197,7 +194,7 @@ app.get(
 );
 ```
 
-The following rate limiter has `overdrive` set to true! It will continue to increase the rate score value per request until it gets to 10x the `limit`, at which it will kick into 'overdrive' and limit the client for 1000x the `expire`, thus blocking the oboxious user/bot for quite some time... in this case it would be 3000ms x 1000, or 50 minutes. While in 'overdrive' it will discontinue keeping score and simply block requests until the time expires.
+The following rate limiter has `overdrive` set to true. It will continue to increase the rate score value per request until it gets to 10x the `limit`, at which it will kick into 'overdrive' and limit the client for 1000x the `expire`, thus blocking the oboxious user/bot for quite some time... in this case it would be 3000ms x 1000, or 50 minutes. While in 'overdrive' it will discontinue keeping score and simply block requests until the time expires.
 
 ```javascript
 app.get(
@@ -218,18 +215,12 @@ app.get(
 
 <hr>
 
-This method returns a promise and can be used in a Nodejs application anywhere you may need rate limiting, but express middleware is not available or appropriate.
-
-```javascript
-redimiter.rateLimiterPromise(username,action?,  expire?, limit?, overdrive?)
-.then(() => doSomething())
-.catch((err) => rateLimitErr(err))
-```
+This method returns a promise and can be used in a Nodejs application anywhere you may need rate limiting but express middleware is not available or appropriate.
 
 | Params    | Default | Description                                                                                                                                                                                                                                                                                                                   |
 | :-------- | :------ | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| username  | null    | (REQUIRED) A string that will be used as the key in Redis for the client request.                                                                                                                                                                                                                                             |
-| action    | null    | (REQUIRED) A string that will be appended to username.                                                                                                                                                                                                                                                                        |
+| username  |         | (REQUIRED) A string that will be used as the key in Redis for the client request.                                                                                                                                                                                                                                             |
+| action    |         | (REQUIRED) A string that will be appended to username.                                                                                                                                                                                                                                                                        |
 | expire    | 1,000   | The miliseconds before redis key expires.                                                                                                                                                                                                                                                                                     |
 | limit     | 10      | The limit at which client requests will be limited                                                                                                                                                                                                                                                                            |
 | overdrive | false   | If `true` keeps count of requests after limit has been surpased. At limit x 10 it will set expire to x1000 and then discontinue counting requests and will simpy block them until expiration. Otherwise if `false` once the limit is surpassed requests will not be counted and will simply be blocked until the key expires. |
@@ -243,8 +234,8 @@ This works much like .rateLimiter() only here you need to specify the `username`
 
 const options = {
   limit: 20,
-  username: this.username,
-  action: 'doAction()',
+  username: clientUsername,
+  action: 'addComment',
 }
 
 rateLimiterPromise({options})
