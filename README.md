@@ -1,5 +1,5 @@
 <h1>
-	<img width="320" src="https://s18.postimg.org/pkkp7tfqx/redimiter.png" alt="Redimiter">
+	<img width="320" src="https://i.ibb.co/1rvrF22/redimiter.png" alt="Redimiter">
 </h1>
 
 A simple, customizable, Redis based [Express](https://expressjs.com/) middleware and [Node.js](https://nodejs.org) rate limiter.
@@ -217,7 +217,7 @@ app.get(
 
 This method returns a promise and can be used in a Nodejs application anywhere you may need rate limiting but express middleware is not available or appropriate.
 
-| Params    | Default | Description                                                                                                                                                                                                                                                                                                                   |
+| Options   | Default | Description                                                                                                                                                                                                                                                                                                                   |
 | :-------- | :------ | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | username  |         | (REQUIRED) A string that will be used as the key in Redis for the client request.                                                                                                                                                                                                                                             |
 | action    |         | (REQUIRED) A string that will be appended to username.                                                                                                                                                                                                                                                                        |
