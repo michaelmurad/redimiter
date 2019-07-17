@@ -1,5 +1,5 @@
-import { RedisOptions, Redis as RedisClient } from "ioredis";
-import { NextFunction, Request, Response } from "express";
+import { Redis as RedisClient } from "ioredis";
+import { NextFunction, Request } from "express";
 import { nonOverdrive, overDrive } from "./rateLimiter";
 import { nonOverdrivePromise, overdrivePromise } from "./rateLimiterPromise";
 import {
@@ -9,8 +9,7 @@ import {
   rLPActionErr,
   rLPUsernameErr,
   rLPExpErr,
-  rLPLimitErr,
-  constrErr
+  rLPLimitErr
 } from "./errors";
 
 export interface RateLimiterOptions {

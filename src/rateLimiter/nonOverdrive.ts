@@ -1,6 +1,5 @@
 import { NextFunction, Response } from "express";
 import { RedisOptions, Redis as RedisClient } from "ioredis";
-// import { promisify } from "util";
 import { rateError, errorFunc } from "../errors";
 
 export default (
