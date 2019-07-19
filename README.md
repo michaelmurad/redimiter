@@ -109,8 +109,11 @@ You can also return a promise:
 
 ```javascript
 const { rateLimiterPromise } = redimiter;
-
-rateLimiterPromise(username, 'createComment', 60000, 1)
+const options = {
+  username: 'name',
+  action: 'createComment',
+}
+rateLimiterPromise(options)
 .then(() => doSomething()}
 // rejects with error if client is over rate limit
 .catch(err => rateLimterErr(err))
@@ -238,7 +241,7 @@ const options = {
   action: 'addComment',
 }
 
-rateLimiterPromise({options})
+rateLimiterPromise(options)
   .then(() => addComment())
   .catch((err) => errorHandler(err))
 ```
