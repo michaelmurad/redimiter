@@ -1,5 +1,5 @@
 import { Redis as RedisClient } from "ioredis";
-import { NextFunction, Request } from "express";
+import { NextFunction, Request, Response } from "express";
 import { nonOverdrive, overDrive } from "./rateLimiter";
 import { nonOverdrivePromise, overdrivePromise } from "./rateLimiterPromise";
 import {
@@ -11,6 +11,7 @@ import {
   rLPExpErr,
   rLPLimitErr
 } from "./errors";
+import { noIp } from "./rateLimiter/noIp";
 
 export interface RateLimiterOptions {
   /** Redis key that will be appended to the ip that will store client request rate.*/
@@ -63,7 +64,11 @@ export default class Redimiter {
       limit: 10,
       overdrive: false
     }
-  ): Function => (req: Request, res, next: NextFunction): Function => {
+  ): Function => (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Function | void => {
     const path = options.path || "";
     const preParseExp: number | any = options.expire;
     const preParseLim: number | any = options.limit;
@@ -86,10 +91,8 @@ export default class Redimiter {
     }
     const redis: RedisClient = this.redisClient;
     const ip = req.ip;
-    if (!ip) {
-      res.status(500).send("No ip address");
-      return res.end();
-    }
+    // checks to see if no ip
+    noIp(ip, res);
     const rateId: string = path ? `${ip}:${path}` : ip;
     if (!overdrive) {
       return nonOverdrive(rateId, redis, limit, expire, res, next);
