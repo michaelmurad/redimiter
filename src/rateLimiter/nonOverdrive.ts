@@ -1,5 +1,5 @@
 import { NextFunction, Response } from "express";
-import { RedisOptions, Redis as RedisClient } from "ioredis";
+import { Redis as RedisClient } from "ioredis";
 import { rateError, errorFunc } from "../errors";
 
 export default (
@@ -11,7 +11,6 @@ export default (
   next: NextFunction
 ) => {
   const request = "r";
-
   // gets the list score
   return redis.llen(rateId, (err, score) => {
     if (err) {
