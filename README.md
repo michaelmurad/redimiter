@@ -44,9 +44,9 @@ Simply add it as middleware with no args and it will rate limit 10 requests/seco
 ```javascript
 app = express();
 
-const limit = redimiter.rateLimiter();
+const { rateLimiter } = redimiter
 
-app.get("/pages", limit, getPages);
+app.get("/pages", rateLimiter(), getPages);
 ```
 
 You can easily add customizable rate limiting on each path using the rateLimiter method options argument,
@@ -152,7 +152,7 @@ It is tested to work with both ioredis and node_redis clients.
 
 It stores the ip of the client + optional path (`ip:path`) as a Redis list and for each client request it adds an item. This sum of items can be called the rate score and is compared to the rate limit to determine if the client request should be allowed. Once over the rate limit the score is no longer increased and requests are blocked, unless overdrive is set to true (see below). The list has an expiration time and when it expires the the whole process repeats after the next client request from the same ip.
 
-| Option    | Default | Description                                                                                                                                                                                                                                                                                                                   |
+| Option   | Default | Description                                                                                                                                                                                                                                                                                                                   |
 | :-------- | :------ | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | path      |         | A string that will be appended to the client's ip, used as the key in Redis.                                                                                                                                                                                                                                                  |
 | expire    | 1,000   | The miliseconds before Redis key expires.                                                                                                                                                                                                                                                                                     |
@@ -220,7 +220,7 @@ app.get(
 
 This method returns a promise and can be used in a Nodejs application anywhere you may need rate limiting but express middleware is not available or appropriate.
 
-| Options   | Default | Description                                                                                                                                                                                                                                                                                                                   |
+| Option   | Default | Description                                                                                                                                                                                                                                                                                                                   |
 | :-------- | :------ | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | username  |         | (REQUIRED) A string that will be used as the key in Redis for the client request.                                                                                                                                                                                                                                             |
 | action    |         | (REQUIRED) A string that will be appended to username.                                                                                                                                                                                                                                                                        |
