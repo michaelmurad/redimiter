@@ -727,7 +727,7 @@ describe("redimiter", () => {
       beforeEach(() => (spyConsole = spy(console, "error")));
       afterEach(() => spyConsole.restore());
       const redimiter = new Redimiter(new FakeRedis({}));
-      const rateLimiter: any = redimiter.rateLimiter;
+      const { rateLimiter }: any = redimiter;
       it("should work with default args", async () => {
         const app = express();
         app.get("/uh", rateLimiter(), (req, res) => res.status(200).send("uh"));
