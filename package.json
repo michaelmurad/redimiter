@@ -16,6 +16,8 @@
     "pretest": "npm run compile",
     "test": "NODE_ENV=test; nyc mocha --check-leaks ./dist/test/",
     "coverage": "nyc report --reporter=text-lcov | coveralls",
+    "test-unit": "npm run compile && mocha --check-leaks ./dist/test/unit.js --exit",
+    "test-int": "npm run compile && mocha --check-leaks ./dist/test/integration.js --exit",
     "testPromise": "npm run compile && mocha --check-leaks --grep rateLimiterPromise  ./dist/test/*.js --exit",
     "testRedis": "npm run compile && mocha --check-leaks --grep Redis  ./dist/test/*.js --exit",
     "prepublishOnly": "npm test"
